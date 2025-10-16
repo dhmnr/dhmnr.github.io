@@ -2,17 +2,24 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>dhmnr.sh</title>
-    <link>http://localhost:1313/</link>
+    <link>https://dhmnr.sh/</link>
     <description>Recent content on dhmnr.sh</description>
     <generator>Hugo</generator>
     <language>en-us</language>
-    <lastBuildDate>Wed, 15 Oct 2025 21:44:23 -0700</lastBuildDate>
-    <atom:link href="http://localhost:1313/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Thu, 16 Oct 2025 12:46:53 -0700</lastBuildDate>
+    <atom:link href="https://dhmnr.sh/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>About</title>
+      <link>https://dhmnr.sh/about/</link>
+      <pubDate>Thu, 16 Oct 2025 12:46:53 -0700</pubDate>
+      <guid>https://dhmnr.sh/about/</guid>
+      <description>&lt;p&gt;I write about whatever I&amp;rsquo;m curious about.&#xA;This blog has no theme. Just thoughts, projects, and explorations.&lt;/p&gt;&#xA;&lt;h2 id=&#34;contact&#34;&gt;Contact&lt;/h2&gt;&#xA;&lt;p&gt;&lt;a href=&#34;https://github.com/dhmnr&#34;&gt;GitHub&lt;/a&gt; • &lt;a href=&#34;mailto:&#34;&gt;Email&lt;/a&gt;&lt;/p&gt;</description>
+    </item>
     <item>
       <title>An Empty Post</title>
-      <link>http://localhost:1313/posts/an-empty-post/</link>
+      <link>https://dhmnr.sh/posts/an-empty-post/</link>
       <pubDate>Wed, 15 Oct 2025 21:44:23 -0700</pubDate>
-      <guid>http://localhost:1313/posts/an-empty-post/</guid>
+      <guid>https://dhmnr.sh/posts/an-empty-post/</guid>
       <description></description>
     </item>
   </channel>
