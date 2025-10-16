@@ -30,3 +30,7 @@ theme = 'archie'
   name = "tags"
   url = "/tags"
   weight = 4
+
+[caches]
+  [caches.images]
+    dir = ':cacheDir/images'
