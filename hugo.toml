@@ -1,4 +1,4 @@
-baseURL = 'https://dhmnr.github.io/'
+baseURL = 'https://dhmnr.sh/'
 languageCode = 'en-us'
 title = 'dhmnr.sh'
 theme = 'archie'
