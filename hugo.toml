@@ -1,0 +1,32 @@
+baseURL = 'https://dhmnr.github.io/'
+languageCode = 'en-us'
+title = 'dhmnr.sh'
+theme = 'archie'
+
+[params]
+  mode = "dark" # color mode: light, dark, or auto
+  useCDN = false
+  subtitle = "everything."
+  mathjax = false # enable MathJax support
+  katex = false # enable KaTeX support
+
+# Main menu items
+[[menu.main]]
+  name = "home"
+  url = "/"
+  weight = 1
+
+[[menu.main]]
+  name = "posts"
+  url = "/posts"
+  weight = 2
+
+[[menu.main]]
+  name = "about"
+  url = "/about"
+  weight = 3
+
+[[menu.main]]
+  name = "tags"
+  url = "/tags"
+  weight = 4
