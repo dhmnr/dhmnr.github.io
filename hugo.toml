@@ -8,7 +8,7 @@ theme = 'archie'
   useCDN = false
   subtitle = "everything."
   mathjax = false # enable MathJax support
-  katex = false # enable KaTeX support
+  katex = true # enable KaTeX support
 
 # Main menu items
 [[menu.main]]
