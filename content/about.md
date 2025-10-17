@@ -9,4 +9,4 @@ This blog has no theme. Just thoughts, projects, and explorations.
 
 ## Contact
 
-[GitHub](https://github.com/dhmnr) • [Email](mailto:)
+[GitHub](https://github.com/dhmnr) • [Email](mailto:mail@dhmnr.sh)
