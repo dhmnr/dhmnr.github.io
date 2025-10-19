@@ -1,12 +1,12 @@
 <!DOCTYPE html>
 <html><head lang="en"><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
 	<meta charset="utf-8" />
-	<meta http-equiv="X-UA-Compatible" content="IE=edge"><title>Attention at Scale: From First Principles to Production Serving - dhmnr.sh</title><meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge"><title>Optimizing Attention: Speed, Memory, and Throughput - dhmnr.sh</title><meta name="viewport" content="width=device-width, initial-scale=1">
 	<meta name="description" content="This post takes you from understanding attention to deploying it at production scale. We&rsquo;ll start with the mathematics and a basic implementation. Then we&rsquo;ll explore the key innovations that enable production systems to serve thousands of users simultaneously at speed." />
 	<meta property="og:image" content=""/>
-	<meta property="og:url" content="http://localhost:1313/posts/complete-math-behind-llms/">
+	<meta property="og:url" content="http://localhost:1313/posts/optimizing-attention/">
   <meta property="og:site_name" content="dhmnr.sh">
-  <meta property="og:title" content="Attention at Scale: From First Principles to Production Serving">
+  <meta property="og:title" content="Optimizing Attention: Speed, Memory, and Throughput">
   <meta property="og:description" content="This post takes you from understanding attention to deploying it at production scale. We’ll start with the mathematics and a basic implementation. Then we’ll explore the key innovations that enable production systems to serve thousands of users simultaneously at speed.">
   <meta property="og:locale" content="en_us">
   <meta property="og:type" content="article">
@@ -15,7 +15,7 @@
     <meta property="article:modified_time" content="2025-10-17T23:46:20-07:00">
 
   <meta name="twitter:card" content="summary">
-  <meta name="twitter:title" content="Attention at Scale: From First Principles to Production Serving">
+  <meta name="twitter:title" content="Optimizing Attention: Speed, Memory, and Throughput">
   <meta name="twitter:description" content="This post takes you from understanding attention to deploying it at production scale. We’ll start with the mathematics and a basic implementation. Then we’ll explore the key innovations that enable production systems to serve thousands of users simultaneously at speed.">
 
         <link href="http://localhost:1313/css/fonts.11a1877508139eac0b5b4852ceb110c35641b3533321e66e39149e901ed5756b.css" rel="stylesheet">
@@ -63,7 +63,7 @@
       
       <div class="post-content">
         <div class="title">
-          <h1 class="title">Attention at Scale: From First Principles to Production Serving</h1>
+          <h1 class="title">Optimizing Attention: Speed, Memory, and Throughput</h1>
           <div class="meta">Posted on Oct 17, 2025 <span class="draft-label">DRAFT</span> </div>
         </div>
         
@@ -71,14 +71,19 @@
           <p>This post takes you from understanding attention to deploying it at production scale. We&rsquo;ll start with the mathematics and a basic implementation. Then we&rsquo;ll explore the key innovations that enable production systems to serve thousands of users simultaneously at speed.</p>
 <h2 id="what-youll-learn">What You&rsquo;ll Learn</h2>
 <p>We&rsquo;ll start from first principles. You&rsquo;ll understand the attention mechanism mathematically, implement multi-head attention, then progressively optimize it.</p>
-<p>Part I - Attention mathematics and implementation</p>
-<p>Part II - Optimizing for speed with FlashAttention</p>
-<p>Part III - Optimizing for memory with GQA</p>
-<p>Part IV - Optimizing for throughput with PagedAttention</p>
-<p>Part V - Production deployment with vLLM</p>
+<p><a href="#part-i---attention-mathematics-and-implementation">Part I - Attention mathematics and implementation</a></p>
+<p><a href="#part-ii---optimizing-for-speed-with-flashattention">Part II - Optimizing for speed with FlashAttention</a></p>
+<p><a href="#part-iii---optimizing-for-memory-with-gqa">Part III - Optimizing for memory with GQA</a></p>
+<p><a href="#part-iv---optimizing-for-throughput-with-pagedattention">Part IV - Optimizing for throughput with PagedAttention</a></p>
+<p><a href="#part-v---production-deployment-with-vllm">Part V - Production deployment with vLLM</a></p>
 <p>Each section profiles the current implementation, identifies the bottleneck, and builds the solution from scratch. By the end, you&rsquo;ll understand both the theory and the production engineering of attention.</p>
 <p>Let&rsquo;s begin.</p>
 <h1 id="part-i---attention-mathematics-and-implementation">Part I - Attention mathematics and implementation</h1>
+<h1 id="part-ii---optimizing-for-speed-with-flashattention">Part II - Optimizing for speed with FlashAttention</h1>
+<h1 id="part-iii---optimizing-for-memory-with-gqa">Part III - Optimizing for memory with GQA</h1>
+<h1 id="part-iv---optimizing-for-throughput-with-pagedattention">Part IV - Optimizing for throughput with PagedAttention</h1>
+<h1 id="part-v---production-deployment-with-vllm">Part V - Production deployment with vLLM</h1>
+<h1 id="appendix">Appendix</h1>
 <h2 id="references">References</h2>
         </section>
         <div class="post-tags">

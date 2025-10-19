@@ -2,23 +2,23 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
-    <loc>https://dhmnr.sh/posts/complete-math-behind-llms/</loc>
+    <loc>http://localhost:1313/</loc>
     <lastmod>2025-10-17T23:46:20-07:00</lastmod>
   </url><url>
-    <loc>https://dhmnr.sh/</loc>
+    <loc>http://localhost:1313/posts/optimizing-attention/</loc>
     <lastmod>2025-10-17T23:46:20-07:00</lastmod>
   </url><url>
-    <loc>https://dhmnr.sh/posts/</loc>
+    <loc>http://localhost:1313/posts/</loc>
     <lastmod>2025-10-17T23:46:20-07:00</lastmod>
   </url><url>
-    <loc>https://dhmnr.sh/about/</loc>
+    <loc>http://localhost:1313/about/</loc>
     <lastmod>2025-10-16T12:46:53-07:00</lastmod>
   </url><url>
-    <loc>https://dhmnr.sh/posts/an-empty-post/</loc>
+    <loc>http://localhost:1313/posts/an-empty-post/</loc>
     <lastmod>2025-10-15T21:44:23-07:00</lastmod>
   </url><url>
-    <loc>https://dhmnr.sh/categories/</loc>
+    <loc>http://localhost:1313/categories/</loc>
   </url><url>
-    <loc>https://dhmnr.sh/tags/</loc>
+    <loc>http://localhost:1313/tags/</loc>
   </url>
 </urlset>
