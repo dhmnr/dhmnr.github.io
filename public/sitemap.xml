@@ -2,13 +2,16 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
-    <loc>http://localhost:1313/</loc>
-    <lastmod>2025-10-17T23:46:20-07:00</lastmod>
+    <loc>http://localhost:1313/posts/a-higher-level-intelligence/</loc>
+    <lastmod>2025-10-21T19:12:20-07:00</lastmod>
   </url><url>
-    <loc>http://localhost:1313/posts/optimizing-attention/</loc>
-    <lastmod>2025-10-17T23:46:20-07:00</lastmod>
+    <loc>http://localhost:1313/</loc>
+    <lastmod>2025-10-21T19:12:20-07:00</lastmod>
   </url><url>
     <loc>http://localhost:1313/posts/</loc>
+    <lastmod>2025-10-21T19:12:20-07:00</lastmod>
+  </url><url>
+    <loc>http://localhost:1313/posts/optimizing-attention/</loc>
     <lastmod>2025-10-17T23:46:20-07:00</lastmod>
   </url><url>
     <loc>http://localhost:1313/about/</loc>
