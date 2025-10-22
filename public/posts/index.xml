@@ -6,8 +6,15 @@
     <description>Recent content in Posts on dhmnr.sh</description>
     <generator>Hugo</generator>
     <language>en-us</language>
-    <lastBuildDate>Fri, 17 Oct 2025 23:46:20 -0700</lastBuildDate>
+    <lastBuildDate>Tue, 21 Oct 2025 19:12:20 -0700</lastBuildDate>
     <atom:link href="http://localhost:1313/posts/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>A Higher Level Intelligence</title>
+      <link>http://localhost:1313/posts/a-higher-level-intelligence/</link>
+      <pubDate>Tue, 21 Oct 2025 19:12:20 -0700</pubDate>
+      <guid>http://localhost:1313/posts/a-higher-level-intelligence/</guid>
+      <description>&lt;p&gt;I. The Core Hypothesis&#xA;Current paradigm:&lt;/p&gt;&#xA;&lt;p&gt;Reasoning = manipulating discrete symbolic tokens (words)&#xA;Intelligence = learning patterns in token sequences&#xA;Architecture: Attention over discrete tokens&lt;/p&gt;&#xA;&lt;p&gt;Our hypothesis:&lt;/p&gt;&#xA;&lt;p&gt;Reasoning occurs in a continuous pre-linguistic substrate&#xA;Language is a lossy discretization of this substrate for communication&#xA;Current AI learns from the discretization, never accessing the underlying continuous process&#xA;This is why they can be fluent but not truly reason&lt;/p&gt;&#xA;&lt;p&gt;Mathematical statement:&#xA;There exists a continuous cognitive process Ψ(x, α, t) where:&lt;/p&gt;</description>
+    </item>
     <item>
       <title>Optimizing Attention: Speed, Memory, and Throughput</title>
       <link>http://localhost:1313/posts/optimizing-attention/</link>
