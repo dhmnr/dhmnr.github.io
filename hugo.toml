@@ -4,11 +4,12 @@ title = 'dhmnr.sh'
 theme = 'archie'
 
 [params]
-  mode = "dark" # color mode: light, dark, or auto
+  mode = "toggle" # color mode: light, dark, or auto
   useCDN = false
   subtitle = "everything."
   mathjax = false # enable MathJax support
   katex = true # enable KaTeX support
+  customCSS = ["css/jetbrains-mono.css"] # custom font
 
 # Main menu items
 [[menu.main]]

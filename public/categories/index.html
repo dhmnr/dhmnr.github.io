@@ -19,7 +19,7 @@
 
 	
 	<link rel="stylesheet" type="text/css" media="screen" href="http://localhost:1313/css/main.2d8b5d025466bd6ddaba53abadd82452f7b979866a58623830289b480f93bb3b.css" />
-		<link id="darkModeStyle" rel="stylesheet" type="text/css" href="http://localhost:1313/css/dark.3cc53e265be0aadc134ff08f276085599313959408ee8c32d9cf35ce71670fff.css"   /><link rel="stylesheet" href="http://localhost:1313/katex/katex.min.css ">
+		<link id="darkModeStyle" rel="stylesheet" type="text/css" href="http://localhost:1313/css/dark.3cc53e265be0aadc134ff08f276085599313959408ee8c32d9cf35ce71670fff.css"  disabled /><link rel="stylesheet" href="http://localhost:1313/katex/katex.min.css ">
 		<script defer src="http://localhost:1313/katex/katex.min.js"></script>
 		<script defer src="http://localhost:1313/katex/auto-render.min.js" onload="renderMathInElement(document.body);"></script>
 		
@@ -33,6 +33,10 @@
 					});
 			});
 		</script>
+		
+		
+		<link rel="stylesheet" type="text/css" href="http://localhost:1313/css/jetbrains-mono.027bd4d70293c64700e7ad92bd136797198199ca99c9ea54541f4b41805e9006.css">
+		
 </head>
 <body>
         <div class="content"><header>
@@ -49,6 +53,18 @@
 		
 		<a href="/tags">tags</a>
 		
+		<button id="dark-mode-toggle" class="nav-toggle" onclick="toggleTheme()" aria-label="Toggle dark mode" type="button"><svg class="feather" viewBox="0 0 24 24" fill="none" stroke="#232333" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg></button>
+		<script src="http://localhost:1313/js/themetoggle.js"></script>
 		
 	</nav>
 </header>
