@@ -2,12 +2,16 @@
 <html><head lang="en"><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
 	<meta charset="utf-8" />
 	<meta http-equiv="X-UA-Compatible" content="IE=edge"><title>Serving LLMs at Scale: FlashAttention - dhmnr.sh</title><meta name="viewport" content="width=device-width, initial-scale=1">
-	<meta name="description" content="This post takes you from understanding attention to deploying it at production scale. We&rsquo;ll start with the mathematics and a basic implementation. Then we&rsquo;ll explore the key innovations that enable production systems to serve thousands of users simultaneously at speed." />
+	<meta name="description" content="Attention is the bottleneck in transformer inference, but not for the reasons you might think.
+A100 sits at 30% utilization during attention not because the math is hard, but because
+it&rsquo;s spending most of its time waiting for data to move between memory and compute cores.
+FlashAttention fixes this by keeping computation in fast on-chip SRAM and never materializing
+the O(N²) attention matrix. Here&rsquo;s how it works." />
 	<meta property="og:image" content=""/>
-	<meta property="og:url" content="http://localhost:1313/posts/optimizing-attention/">
+	<meta property="og:url" content="http://localhost:1313/posts/serving-llms-at-scale-flashattention/">
   <meta property="og:site_name" content="dhmnr.sh">
   <meta property="og:title" content="Serving LLMs at Scale: FlashAttention">
-  <meta property="og:description" content="This post takes you from understanding attention to deploying it at production scale. We’ll start with the mathematics and a basic implementation. Then we’ll explore the key innovations that enable production systems to serve thousands of users simultaneously at speed.">
+  <meta property="og:description" content="Attention is the bottleneck in transformer inference, but not for the reasons you might think. A100 sits at 30% utilization during attention not because the math is hard, but because it’s spending most of its time waiting for data to move between memory and compute cores. FlashAttention fixes this by keeping computation in fast on-chip SRAM and never materializing the O(N²) attention matrix. Here’s how it works.">
   <meta property="og:locale" content="en_us">
   <meta property="og:type" content="article">
     <meta property="article:section" content="posts">
@@ -16,7 +20,7 @@
 
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="Serving LLMs at Scale: FlashAttention">
-  <meta name="twitter:description" content="This post takes you from understanding attention to deploying it at production scale. We’ll start with the mathematics and a basic implementation. Then we’ll explore the key innovations that enable production systems to serve thousands of users simultaneously at speed.">
+  <meta name="twitter:description" content="Attention is the bottleneck in transformer inference, but not for the reasons you might think. A100 sits at 30% utilization during attention not because the math is hard, but because it’s spending most of its time waiting for data to move between memory and compute cores. FlashAttention fixes this by keeping computation in fast on-chip SRAM and never materializing the O(N²) attention matrix. Here’s how it works.">
 
         <link href="http://localhost:1313/css/fonts.11a1877508139eac0b5b4852ceb110c35641b3533321e66e39149e901ed5756b.css" rel="stylesheet">
 	
@@ -84,25 +88,30 @@
         </div>
         
         <section class="body">
-          <p>This post takes you from understanding attention to deploying it at production scale. We&rsquo;ll start with the mathematics and a basic implementation. Then we&rsquo;ll explore the key innovations that enable production systems to serve thousands of users simultaneously at speed.</p>
-<h2 id="what-youll-learn">What You&rsquo;ll Learn</h2>
-<p>We&rsquo;ll start from first principles. You&rsquo;ll understand the attention mechanism mathematically, implement multi-head attention, then progressively optimize it.</p>
-<p><a href="#part-i---attention-mathematics-and-implementation">Part I - Attention mathematics and implementation</a></p>
-<p><a href="#part-ii---optimizing-for-speed-with-flashattention">Part II - Optimizing for speed with FlashAttention</a></p>
-<p><a href="#part-iii---optimizing-for-memory-with-gqa">Part III - Optimizing for memory with GQA</a></p>
-<p><a href="#part-iv---optimizing-for-throughput-with-pagedattention">Part IV - Optimizing for throughput with PagedAttention</a></p>
-<p><a href="#part-v---production-deployment-with-vllm">Part V - Production deployment with vLLM</a></p>
-<p>Each section profiles the current implementation, identifies the bottleneck, and builds the solution from scratch. By the end, you&rsquo;ll understand both the theory and the production engineering of attention.</p>
-<p>Let&rsquo;s begin.</p>
-<h1 id="part-i---attention-mathematics-and-implementation">Part I - Attention mathematics and implementation</h1>
-<h2 id="what-is-attention">What is Attention?</h2>
-<h2 id="multi-head-attention">Multi-Head Attention</h2>
-<h2 id="the-entire-decoder-block">The Entire Decoder Block</h2>
-<h2 id="need-for-optimizing-attention">Need for Optimizing Attention</h2>
-<h1 id="part-ii---optimizing-for-speed-with-flashattention">Part II - Optimizing for speed with FlashAttention</h1>
-<h1 id="part-iii---optimizing-for-memory-with-gqa">Part III - Optimizing for memory with GQA</h1>
-<h1 id="part-iv---optimizing-for-throughput-with-pagedattention">Part IV - Optimizing for throughput with PagedAttention</h1>
-<h1 id="part-v---production-deployment-with-vllm">Part V - Production deployment with vLLM</h1>
+          <p>Attention is the bottleneck in transformer inference, but not for the reasons you might think.
+A100 sits at 30% utilization during attention not because the math is hard, but because
+it&rsquo;s spending most of its time waiting for data to move between memory and compute cores.
+FlashAttention fixes this by keeping computation in fast on-chip SRAM and never materializing
+the O(N²) attention matrix. Here&rsquo;s how it works.</p>
+<h2 id="the-memory-bottleneck">The Memory Bottleneck</h2>
+<p>Standard attention&rsquo;s memory access pattern
+Counting memory operations vs FLOPs
+Why attention is memory-bound</p>
+<h2 id="understanding-the-memory-hierarchy">Understanding the Memory Hierarchy</h2>
+<p>SRAM vs HBM: capacity and bandwidth
+The actual numbers that matter
+Why compute sits idle</p>
+<h2 id="flashattentions-core-insight">FlashAttention&rsquo;s Core Insight</h2>
+<p>The tiling strategy
+Online softmax algorithm
+Trading recomputation for memory bandwidth</p>
+<h2 id="performance-characteristics">Performance Characteristics</h2>
+<p>Speedup vs sequence length
+Memory usage comparison
+When it matters (and when it doesn&rsquo;t)</p>
+<h2 id="whats-next">What&rsquo;s Next</h2>
+<p>What FlashAttention doesn&rsquo;t solve
+Teaser for PagedAttention</p>
 <h1 id="appendix">Appendix</h1>
 <h2 id="references">References</h2>
         </section>

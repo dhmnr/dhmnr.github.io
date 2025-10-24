@@ -16,11 +16,11 @@
       <description>&lt;h2 id=&#34;i-the-core-hypothesis&#34;&gt;I. The Core Hypothesis&lt;/h2&gt;&#xA;&lt;p&gt;Current paradigm:&lt;/p&gt;&#xA;&lt;p&gt;Reasoning = manipulating discrete symbolic tokens (words)&#xA;Intelligence = learning patterns in token sequences&#xA;Architecture: Attention over discrete tokens&lt;/p&gt;&#xA;&lt;p&gt;Our hypothesis:&lt;/p&gt;&#xA;&lt;p&gt;Reasoning occurs in a continuous pre-linguistic substrate&#xA;Language is a lossy discretization of this substrate for communication&#xA;Current AI learns from the discretization, never accessing the underlying continuous process&#xA;This is why they can be fluent but not truly reason&lt;/p&gt;&#xA;&lt;p&gt;Mathematical statement:&#xA;There exists a continuous cognitive process $\Psi(x, \alpha, t)$ where:&lt;/p&gt;</description>
     </item>
     <item>
-      <title>Optimizing Attention: Speed, Memory, and Throughput</title>
-      <link>http://localhost:1313/posts/optimizing-attention/</link>
+      <title>Serving LLMs at Scale: FlashAttention</title>
+      <link>http://localhost:1313/posts/serving-llms-at-scale-flashattention/</link>
       <pubDate>Fri, 17 Oct 2025 23:46:20 -0700</pubDate>
-      <guid>http://localhost:1313/posts/optimizing-attention/</guid>
-      <description>&lt;p&gt;This post takes you from understanding attention to deploying it at production scale. We&amp;rsquo;ll start with the mathematics and a basic implementation. Then we&amp;rsquo;ll explore the key innovations that enable production systems to serve thousands of users simultaneously at speed.&lt;/p&gt;</description>
+      <guid>http://localhost:1313/posts/serving-llms-at-scale-flashattention/</guid>
+      <description>&lt;p&gt;Attention is the bottleneck in transformer inference, but not for the reasons you might think.&#xA;A100 sits at 30% utilization during attention not because the math is hard, but because&#xA;it&amp;rsquo;s spending most of its time waiting for data to move between memory and compute cores.&#xA;FlashAttention fixes this by keeping computation in fast on-chip SRAM and never materializing&#xA;the O(N²) attention matrix. Here&amp;rsquo;s how it works.&lt;/p&gt;</description>
     </item>
     <item>
       <title>About</title>

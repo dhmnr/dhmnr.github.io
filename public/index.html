@@ -20,7 +20,7 @@
 
 	
 	<link rel="stylesheet" type="text/css" media="screen" href="http://localhost:1313/css/main.2d8b5d025466bd6ddaba53abadd82452f7b979866a58623830289b480f93bb3b.css" />
-		<link id="darkModeStyle" rel="stylesheet" type="text/css" href="http://localhost:1313/css/dark.3cc53e265be0aadc134ff08f276085599313959408ee8c32d9cf35ce71670fff.css"   /><link rel="stylesheet" href="http://localhost:1313/katex/katex.min.css ">
+		<link id="darkModeStyle" rel="stylesheet" type="text/css" href="http://localhost:1313/css/dark.3cc53e265be0aadc134ff08f276085599313959408ee8c32d9cf35ce71670fff.css"  disabled /><link rel="stylesheet" href="http://localhost:1313/katex/katex.min.css ">
 		<script defer src="http://localhost:1313/katex/katex.min.js"></script>
 		<script defer src="http://localhost:1313/katex/auto-render.min.js" onload="renderMathInElement(document.body);"></script>
 		
@@ -34,6 +34,10 @@
 					});
 			});
 		</script>
+		
+		
+		<link rel="stylesheet" type="text/css" href="http://localhost:1313/css/jetbrains-mono.027bd4d70293c64700e7ad92bd136797198199ca99c9ea54541f4b41805e9006.css">
+		
 </head>
 
 	<body>
@@ -52,6 +56,18 @@
 		
 		<a href="/tags">tags</a>
 		
+		<button id="dark-mode-toggle" class="nav-toggle" onclick="toggleTheme()" aria-label="Toggle dark mode" type="button"><svg class="feather" viewBox="0 0 24 24" fill="none" stroke="#232333" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg></button>
+		<script src="http://localhost:1313/js/themetoggle.js"></script>
 		
 	</nav>
 </header>
@@ -85,14 +101,18 @@ There exists a continuous cognitive process $\Psi(x, \alpha, t)$ where:</p>&hell
 				</section>
 				
 				<section class="list-item">
-					<h1 class="title"><a href="/posts/optimizing-attention/">Optimizing Attention: Speed, Memory, and Throughput</a></h1>
+					<h1 class="title"><a href="/posts/serving-llms-at-scale-flashattention/">Serving LLMs at Scale: FlashAttention</a></h1>
 					<time>Oct 17, 2025 <span class="draft-label">DRAFT</span> </time>
 					<br><div class="description">
 	
-	<p>This post takes you from understanding attention to deploying it at production scale. We&rsquo;ll start with the mathematics and a basic implementation. Then we&rsquo;ll explore the key innovations that enable production systems to serve thousands of users simultaneously at speed.</p>&hellip;
+	<p>Attention is the bottleneck in transformer inference, but not for the reasons you might think.
+A100 sits at 30% utilization during attention not because the math is hard, but because
+it&rsquo;s spending most of its time waiting for data to move between memory and compute cores.
+FlashAttention fixes this by keeping computation in fast on-chip SRAM and never materializing
+the O(N²) attention matrix. Here&rsquo;s how it works.</p>&hellip;
 	
 </div>
-					<a class="readmore" href="/posts/optimizing-attention/">Read more ⟶</a>
+					<a class="readmore" href="/posts/serving-llms-at-scale-flashattention/">Read more ⟶</a>
 				</section>
 				
 				<section class="list-item">
