@@ -1,0 +1,19 @@
+# Build artifacts
+build/
+*.ncu-rep
+*.nsys-rep
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Compiled files
+*.o
+*.exe
+*.out
+*.app
+
+

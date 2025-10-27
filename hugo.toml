@@ -9,7 +9,12 @@ theme = 'archie'
   subtitle = "everything."
   mathjax = false # enable MathJax support
   katex = true # enable KaTeX support
-  customCSS = ["css/jetbrains-mono.css"] # custom font
+  customCSS = ["css/jetbrains-mono.css", "css/speedrun.css"]
+
+[markup]
+  [markup.goldmark]
+    [markup.goldmark.renderer]
+      unsafe = true
 
 # Main menu items
 [[menu.main]]

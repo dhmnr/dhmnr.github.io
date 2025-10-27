@@ -1,0 +1,67 @@
+/* Light mode (default) */
+.speedrun-definition {
+  background: #ececec;
+  color: #232333;
+  padding: 1.25rem 1rem;
+  margin: 1.5rem 0;
+  border-radius: 6px;
+  font-family: Georgia, 'Times New Roman', serif;
+  border: 1px solid #663399;
+}
+
+.speedrun-title {
+  font-size: 0.9rem;
+  font-weight: 400;
+  margin-bottom: 0.6rem;
+  letter-spacing: 0.02em;
+}
+
+.pronunciation {
+  color: #737373;
+  font-size: 0.75em;
+}
+
+.speedrun-title em {
+  font-style: italic;
+  color: #737373;
+}
+
+.definition-text {
+  font-size: 0.75rem;
+  line-height: 1.5;
+  margin: 0.3rem 0;
+}
+
+.usage-example {
+  font-style: italic;
+  color: #999999;
+  margin-top: 0.6rem;
+  font-size: 0.7rem;
+}
+
+/* Dark mode */
+.dark .speedrun-definition {
+  background: #272822;
+  color: #ffffff;
+  border-color: #0066ff;
+}
+
+.dark .speedrun-title {
+  color: #ffffff;
+}
+
+.dark .pronunciation {
+  color: #dddddd;
+}
+
+.dark .speedrun-title em {
+  color: #dddddd;
+}
+
+.dark .definition-text {
+  color: #ffffff;
+}
+
+.dark .usage-example {
+  color: #dddddd;
+}

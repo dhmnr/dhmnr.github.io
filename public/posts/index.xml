@@ -2,31 +2,38 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Posts on dhmnr.sh</title>
-    <link>http://localhost:1313/posts/</link>
+    <link>https://dhmnr.sh/posts/</link>
     <description>Recent content in Posts on dhmnr.sh</description>
     <generator>Hugo</generator>
     <language>en-us</language>
-    <lastBuildDate>Tue, 21 Oct 2025 19:12:20 -0700</lastBuildDate>
-    <atom:link href="http://localhost:1313/posts/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Mon, 27 Oct 2025 00:20:27 -0700</lastBuildDate>
+    <atom:link href="https://dhmnr.sh/posts/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Speedrunning GPU Profiling with Nsight Compute CLI</title>
+      <link>https://dhmnr.sh/posts/speedrunning-ncu/</link>
+      <pubDate>Mon, 27 Oct 2025 00:20:27 -0700</pubDate>
+      <guid>https://dhmnr.sh/posts/speedrunning-ncu/</guid>
+      <description>&lt;div class=&#34;speedrun-definition&#34;&gt;&#xD;&#xA;    &lt;h2 class=&#34;speedrun-title&#34;&gt;speed·running &lt;span class=&#34;pronunciation&#34;&gt;/ˈspēdˌrəniNG/&lt;/span&gt; &lt;em&gt;v.&lt;/em&gt;&lt;/h2&gt;&#xD;&#xA;    &lt;p class=&#34;definition-text&#34;&gt;&#xD;&#xA;        &lt;strong&gt;1.&lt;/strong&gt; To complete (a video game, or part of a game) as fast as possible. Speedrunning often&#xD;&#xA;        involves following planned routes, which may incorporate sequence breaking and allow&#xD;&#xA;        sections to be skipped.&#xD;&#xA;    &lt;/p&gt;&#xD;&#xA;&lt;/div&gt;&#xA;&lt;p&gt;You&amp;rsquo;ve written your first CUDA kernel. You even implemented a basic reduction. It runs. But is it fast? Is it optimized? Where are the bottlenecks? How do you even answer these question?&lt;/p&gt;&#xA;&lt;br&gt;&#xD;&#xA;&lt;p&gt;The Answer is Profiling.&lt;/p&gt;</description>
+    </item>
     <item>
       <title>A Higher Level Intelligence</title>
-      <link>http://localhost:1313/posts/a-higher-level-intelligence/</link>
+      <link>https://dhmnr.sh/posts/a-higher-level-intelligence/</link>
       <pubDate>Tue, 21 Oct 2025 19:12:20 -0700</pubDate>
-      <guid>http://localhost:1313/posts/a-higher-level-intelligence/</guid>
+      <guid>https://dhmnr.sh/posts/a-higher-level-intelligence/</guid>
       <description>&lt;h2 id=&#34;i-the-core-hypothesis&#34;&gt;I. The Core Hypothesis&lt;/h2&gt;&#xA;&lt;p&gt;Current paradigm:&lt;/p&gt;&#xA;&lt;p&gt;Reasoning = manipulating discrete symbolic tokens (words)&#xA;Intelligence = learning patterns in token sequences&#xA;Architecture: Attention over discrete tokens&lt;/p&gt;&#xA;&lt;p&gt;Our hypothesis:&lt;/p&gt;&#xA;&lt;p&gt;Reasoning occurs in a continuous pre-linguistic substrate&#xA;Language is a lossy discretization of this substrate for communication&#xA;Current AI learns from the discretization, never accessing the underlying continuous process&#xA;This is why they can be fluent but not truly reason&lt;/p&gt;&#xA;&lt;p&gt;Mathematical statement:&#xA;There exists a continuous cognitive process $\Psi(x, \alpha, t)$ where:&lt;/p&gt;</description>
     </item>
     <item>
       <title>Serving LLMs at Scale: FlashAttention</title>
-      <link>http://localhost:1313/posts/serving-llms-at-scale-flashattention/</link>
+      <link>https://dhmnr.sh/posts/serving-llms-at-scale-flashattention/</link>
       <pubDate>Fri, 17 Oct 2025 23:46:20 -0700</pubDate>
-      <guid>http://localhost:1313/posts/serving-llms-at-scale-flashattention/</guid>
+      <guid>https://dhmnr.sh/posts/serving-llms-at-scale-flashattention/</guid>
       <description>&lt;p&gt;Attention is the bottleneck in transformer inference, but not for the reasons you might think.&#xA;A100 sits at 30% utilization during attention not because the math is hard, but because&#xA;it&amp;rsquo;s spending most of its time waiting for data to move between memory and compute cores.&#xA;FlashAttention fixes this by keeping computation in fast on-chip SRAM and never materializing&#xA;the O(N²) attention matrix. Here&amp;rsquo;s how it works.&lt;/p&gt;</description>
     </item>
     <item>
       <title>An Empty Post</title>
-      <link>http://localhost:1313/posts/an-empty-post/</link>
+      <link>https://dhmnr.sh/posts/an-empty-post/</link>
       <pubDate>Wed, 15 Oct 2025 21:44:23 -0700</pubDate>
-      <guid>http://localhost:1313/posts/an-empty-post/</guid>
+      <guid>https://dhmnr.sh/posts/an-empty-post/</guid>
       <description></description>
     </item>
   </channel>

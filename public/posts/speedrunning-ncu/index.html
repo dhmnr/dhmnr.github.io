@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html><head lang="en">
+	<meta charset="utf-8" />
+	<meta http-equiv="X-UA-Compatible" content="IE=edge"><title>Speedrunning GPU Profiling with Nsight Compute CLI - dhmnr.sh</title><meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="description" content="
+    speed·running /ˈspēdˌrəniNG/ v.
+    
+        1. To complete (a video game, or part of a game) as fast as possible. Speedrunning often
+        involves following planned routes, which may incorporate sequence breaking and allow
+        sections to be skipped.
+    
+
+You&rsquo;ve written your first CUDA kernel. You even implemented a basic reduction. It runs. But is it fast? Is it optimized? Where are the bottlenecks? How do you even answer these question?
+
+The Answer is Profiling." />
+	<meta property="og:image" content=""/>
+	<meta property="og:url" content="https://dhmnr.sh/posts/speedrunning-ncu/">
+  <meta property="og:site_name" content="dhmnr.sh">
+  <meta property="og:title" content="Speedrunning GPU Profiling with Nsight Compute CLI">
+  <meta property="og:description" content="speed·running /ˈspēdˌrəniNG/ v.1. To complete (a video game, or part of a game) as fast as possible. Speedrunning ofteninvolves following planned routes, which may incorporate sequence breaking and allowsections to be skipped.You’ve written your first CUDA kernel. You even implemented a basic reduction. It runs. But is it fast? Is it optimized? Where are the bottlenecks? How do you even answer these question?
+The Answer is Profiling.">
+  <meta property="og:locale" content="en_us">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2025-10-27T00:20:27-07:00">
+    <meta property="article:modified_time" content="2025-10-27T00:20:27-07:00">
+
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Speedrunning GPU Profiling with Nsight Compute CLI">
+  <meta name="twitter:description" content="speed·running /ˈspēdˌrəniNG/ v.1. To complete (a video game, or part of a game) as fast as possible. Speedrunning ofteninvolves following planned routes, which may incorporate sequence breaking and allowsections to be skipped.You’ve written your first CUDA kernel. You even implemented a basic reduction. It runs. But is it fast? Is it optimized? Where are the bottlenecks? How do you even answer these question?
+The Answer is Profiling.">
+
+        <link href="https://dhmnr.sh/css/fonts.11a1877508139eac0b5b4852ceb110c35641b3533321e66e39149e901ed5756b.css" rel="stylesheet">
+	
+
+	
+	<link rel="stylesheet" type="text/css" media="screen" href="https://dhmnr.sh/css/main.2d8b5d025466bd6ddaba53abadd82452f7b979866a58623830289b480f93bb3b.css" />
+		<link id="darkModeStyle" rel="stylesheet" type="text/css" href="https://dhmnr.sh/css/dark.9ed98c3034cb6a39c0e7c65d23a9db36b6e32f9e206f1b767c5206ce999f7f0a.css"  disabled /><link rel="stylesheet" href="https://dhmnr.sh/katex/katex.min.css ">
+		<script defer src="https://dhmnr.sh/katex/katex.min.js"></script>
+		<script defer src="https://dhmnr.sh/katex/auto-render.min.js" onload="renderMathInElement(document.body);"></script>
+		
+		<script>
+			document.addEventListener("DOMContentLoaded", function() {
+					renderMathInElement(document.body, {
+							delimiters: [
+									{left: "$$", right: "$$", display: true},
+									{left: "$", right: "$", display: false}
+							]
+					});
+			});
+		</script>
+		
+		
+		<link rel="stylesheet" type="text/css" href="https://dhmnr.sh/css/jetbrains-mono.027bd4d70293c64700e7ad92bd136797198199ca99c9ea54541f4b41805e9006.css">
+		
+		
+		<link rel="stylesheet" type="text/css" href="https://dhmnr.sh/css/speedrun.ff7cd40ab2a8b7b70c253c14e084f61b5d4ce5c3190ea3b5c440e26f0fa3a52d.css">
+		
+</head>
+<body>
+        <div class="content"><header>
+	<div class="main">
+		<a href="https://dhmnr.sh/">dhmnr.sh</a>
+	</div>
+	<nav>
+		
+		<a href="/">home</a>
+		
+		<a href="/posts">posts</a>
+		
+		<a href="/about">about</a>
+		
+		<a href="/tags">tags</a>
+		
+		<button id="dark-mode-toggle" class="nav-toggle" onclick="toggleTheme()" aria-label="Toggle dark mode" type="button"><svg class="feather" viewBox="0 0 24 24" fill="none" stroke="#232333" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg></button>
+		<script src="https://dhmnr.sh/js/themetoggle.js"></script>
+		
+	</nav>
+</header>
+
+<main>
+  <article>
+    <div class="post-container">
+      
+      <div class="post-content">
+        <div class="title">
+          <h1 class="title">Speedrunning GPU Profiling with Nsight Compute CLI</h1>
+          <div class="meta">Posted on Oct 27, 2025 <span class="draft-label">DRAFT</span> </div>
+        </div>
+        
+        <section class="body">
+          <div class="speedrun-definition">
+    <h2 class="speedrun-title">speed·running <span class="pronunciation">/ˈspēdˌrəniNG/</span> <em>v.</em></h2>
+    <p class="definition-text">
+        <strong>1.</strong> To complete (a video game, or part of a game) as fast as possible. Speedrunning often
+        involves following planned routes, which may incorporate sequence breaking and allow
+        sections to be skipped.
+    </p>
+</div>
+<p>You&rsquo;ve written your first CUDA kernel. You even implemented a basic reduction. It runs. But is it fast? Is it optimized? Where are the bottlenecks? How do you even answer these question?</p>
+<br>
+<p>The Answer is Profiling.</p>
+<p>Theere&rsquo;s a famous quote by Peter Drucker (although in a completely different context) that applies here.
+&ldquo;If you can&rsquo;t measure it, you can&rsquo;t improve it&rdquo;. So in order to improve our kernel we must peek through the curtain to see what&rsquo;s actually happening. In this guide we will speedrun NVIDIA Nsight compute or <code>ncu</code>.</p>
+<br>
+<p>Before we start, as you might have guessed this post requires basic CUDA and GPU architecture knowledge. For everything else we&rsquo;ll try to explain the concepts as we go.</p>
+<p>Also we will only cover the CLI part of ncu, there&rsquo;s a nice UI that comes bundled with it which is <strong>not</strong> be covered. Don&rsquo;t worry though, CLI is more than enough.</p>
+<p>Let&rsquo;s dive in! 🚀</p>
+<!-- ---
+
+## Table of Contents
+
+1. [Getting Started with Nsight Compute](#getting-started)
+2. [Understanding the Output Sections](#output-sections)
+3. [The Critical Metrics](#critical-metrics)
+4. [Identifying Bottlenecks](#identifying-bottlenecks)
+5. [Optimization Workflows](#optimization-workflows)
+6. [Case Study: Vector Addition](#case-study)
+7. [Common Patterns](#common-patterns)
+8. [Advanced Metrics](#advanced-metrics)
+9. [Troubleshooting](#troubleshooting)
+
+--- -->
+<h2 id="getting-started">Getting Started with Nsight Compute</h2>
+<h3 id="installation">Installation</h3>
+<p>Nsight Compute or <code>ncu</code> should come installed with your CUDA Toolkit. Check your installation by running <code>ncu --version</code>.</p>
+<pre tabindex="0"><code>$ ncu --version
+NVIDIA (R) Nsight Compute Command Line Profiler
+Copyright (c) 2018-2025 NVIDIA Corporation
+Version 2025.3.1.0 (build 36398880) (public-release)
+</code></pre><p>If it&rsquo;s not installed, grab it from <a href="https://developer.nvidia.com/tools-overview/nsight-compute/get-started">https://developer.nvidia.com/tools-overview/nsight-compute/get-started</a></p>
+<h3 id="basic-usage">Basic Usage</h3>
+<p>Profiling CUDA kernels with <code>ncu</code> is as simple as running:</p>
+<pre tabindex="0"><code>ncu ./your_program
+</code></pre><p>Which profiles you program with the default metric set. In case you wanted all the details in the world, run:</p>
+<pre tabindex="0"><code>ncu --set full ./your_program
+</code></pre><p>You have multiple Kernels? Don&rsquo;t worry. Just specify the <code>--kernel-name</code>.</p>
+<pre tabindex="0"><code>ncu --kernel-name vectorAddKernel ./your_program
+</code></pre><p>Generate and save your report for analysis (more on this later).</p>
+<pre tabindex="0"><code>ncu -o report ./your_program
+</code></pre><!-- 
+### Common Options
+
+```bash
+# Profile first 3 kernel launches only
+ncu --launch-count 3 ./program
+
+# Target specific metrics
+ncu --metrics sm__throughput.avg.pct_of_peak_sustained_elapsed \
+    ./program
+
+# Export as CSV
+ncu --csv ./program > metrics.csv
+
+# Quiet output (less verbose)
+ncu --quiet ./program
+``` -->
+<hr>
+<h2 id="output-sections">Understanding the Output Sections</h2>
+<p>Alright, Let&rsquo;s do a real profiling session. Here&rsquo;s a simple CUDA kernel that adds two vectors together:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-C++" data-lang="C++"><span style="display:flex;"><span>__global__ <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">vectorAddKernel</span>(<span style="color:#66d9ef">const</span> <span style="color:#66d9ef">float</span> <span style="color:#f92672">*</span>a, <span style="color:#66d9ef">const</span> <span style="color:#66d9ef">float</span> <span style="color:#f92672">*</span>b, <span style="color:#66d9ef">float</span> <span style="color:#f92672">*</span>c,
+</span></span><span style="display:flex;"><span>                                <span style="color:#66d9ef">int</span> n) {
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">int</span> idx <span style="color:#f92672">=</span> blockIdx.x <span style="color:#f92672">*</span> blockDim.x <span style="color:#f92672">+</span> threadIdx.x;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  <span style="color:#75715e">// Grid-stride loop for handling arrays larger than grid size
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>  <span style="color:#66d9ef">for</span> (<span style="color:#66d9ef">int</span> i <span style="color:#f92672">=</span> idx; i <span style="color:#f92672">&lt;</span> n; i <span style="color:#f92672">+=</span> blockDim.x <span style="color:#f92672">*</span> gridDim.x) {
+</span></span><span style="display:flex;"><span>    c[i] <span style="color:#f92672">=</span> a[i] <span style="color:#f92672">+</span> b[i];
+</span></span><span style="display:flex;"><span>  }
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div>
+        </section>
+        <div class="post-tags">
+          
+          
+          
+        </div>
+      </div>
+
+      
+      
+    </div>
+
+    </article>
+</main>
+<footer>
+  <div style="display:flex"></div>
+  <div class="footer-info">
+    2025  <a
+      href="https://github.com/athul/archie">Archie Theme</a> | Built with <a href="https://gohugo.io">Hugo</a>
+  </div>
+</footer>
+
+
+
+</div>
+    </body>
+</html>

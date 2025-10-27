@@ -1,0 +1,1165 @@
+<!DOCTYPE html>
+<html><head lang="en"><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
+	<meta charset="utf-8" />
+	<meta http-equiv="X-UA-Compatible" content="IE=edge"><title>Speedrunning GPU Profiling with Nsight Compute CLI - dhmnr.sh</title><meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="description" content="
+    speed·running /ˈspēdˌrəniNG/ v.
+    
+        1. To complete (a video game, or part of a game) as fast as possible. Speedrunning often
+        involves following planned routes, which may incorporate sequence breaking and allow
+        sections to be skipped.
+    
+
+You&rsquo;ve written your first CUDA kernel. You even implemented a basic reduction. It runs. But is it fast? Is it optimized? Where are the bottlenecks? How do you even answer these question?
+
+The Answer is Profiling." />
+	<meta property="og:image" content=""/>
+	<meta property="og:url" content="http://localhost:1313/posts/speedrunning-gpu-profiling-with-ncu/">
+  <meta property="og:site_name" content="dhmnr.sh">
+  <meta property="og:title" content="Speedrunning GPU Profiling with Nsight Compute CLI">
+  <meta property="og:description" content="speed·running /ˈspēdˌrəniNG/ v.1. To complete (a video game, or part of a game) as fast as possible. Speedrunning ofteninvolves following planned routes, which may incorporate sequence breaking and allowsections to be skipped.You’ve written your first CUDA kernel. You even implemented a basic reduction. It runs. But is it fast? Is it optimized? Where are the bottlenecks? How do you even answer these question?
+The Answer is Profiling.">
+  <meta property="og:locale" content="en_us">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2025-10-27T00:20:27-07:00">
+    <meta property="article:modified_time" content="2025-10-27T00:20:27-07:00">
+
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Speedrunning GPU Profiling with Nsight Compute CLI">
+  <meta name="twitter:description" content="speed·running /ˈspēdˌrəniNG/ v.1. To complete (a video game, or part of a game) as fast as possible. Speedrunning ofteninvolves following planned routes, which may incorporate sequence breaking and allowsections to be skipped.You’ve written your first CUDA kernel. You even implemented a basic reduction. It runs. But is it fast? Is it optimized? Where are the bottlenecks? How do you even answer these question?
+The Answer is Profiling.">
+
+        <link href="http://localhost:1313/css/fonts.11a1877508139eac0b5b4852ceb110c35641b3533321e66e39149e901ed5756b.css" rel="stylesheet">
+	
+
+	
+	<link rel="stylesheet" type="text/css" media="screen" href="http://localhost:1313/css/main.2d8b5d025466bd6ddaba53abadd82452f7b979866a58623830289b480f93bb3b.css" />
+		<link id="darkModeStyle" rel="stylesheet" type="text/css" href="http://localhost:1313/css/dark.f4db53f6ab712da867f2fcd1216300dadea15c083b3cadc9f08a69593d9192af.css"  disabled /><link rel="stylesheet" href="http://localhost:1313/katex/katex.min.css ">
+		<script defer src="http://localhost:1313/katex/katex.min.js"></script>
+		<script defer src="http://localhost:1313/katex/auto-render.min.js" onload="renderMathInElement(document.body);"></script>
+		
+		<script>
+			document.addEventListener("DOMContentLoaded", function() {
+					renderMathInElement(document.body, {
+							delimiters: [
+									{left: "$$", right: "$$", display: true},
+									{left: "$", right: "$", display: false}
+							]
+					});
+			});
+		</script>
+		
+		
+		<link rel="stylesheet" type="text/css" href="http://localhost:1313/css/jetbrains-mono.027bd4d70293c64700e7ad92bd136797198199ca99c9ea54541f4b41805e9006.css">
+		
+		
+		<link rel="stylesheet" type="text/css" href="http://localhost:1313/css/speedrun.ff7cd40ab2a8b7b70c253c14e084f61b5d4ce5c3190ea3b5c440e26f0fa3a52d.css">
+		
+</head>
+<body>
+        <div class="content"><header>
+	<div class="main">
+		<a href="http://localhost:1313/">dhmnr.sh</a>
+	</div>
+	<nav>
+		
+		<a href="/">home</a>
+		
+		<a href="/posts">posts</a>
+		
+		<a href="/about">about</a>
+		
+		<a href="/tags">tags</a>
+		
+		<button id="dark-mode-toggle" class="nav-toggle" onclick="toggleTheme()" aria-label="Toggle dark mode" type="button"><svg class="feather" viewBox="0 0 24 24" fill="none" stroke="#232333" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg></button>
+		<script src="http://localhost:1313/js/themetoggle.js"></script>
+		
+	</nav>
+</header>
+
+<main>
+  <article>
+    <div class="post-container">
+      
+      <div class="post-content">
+        <div class="title">
+          <h1 class="title">Speedrunning GPU Profiling with Nsight Compute CLI</h1>
+          <div class="meta">Posted on Oct 27, 2025 <span class="draft-label">DRAFT</span> </div>
+        </div>
+        
+        <section class="body">
+          <div class="speedrun-definition">
+    <h2 class="speedrun-title">speed·running <span class="pronunciation">/ˈspēdˌrəniNG/</span> <em>v.</em></h2>
+    <p class="definition-text">
+        <strong>1.</strong> To complete (a video game, or part of a game) as fast as possible. Speedrunning often
+        involves following planned routes, which may incorporate sequence breaking and allow
+        sections to be skipped.
+    </p>
+</div>
+<p>You&rsquo;ve written your first CUDA kernel. You even implemented a basic reduction. It runs. But is it fast? Is it optimized? Where are the bottlenecks? How do you even answer these question?</p>
+<br>
+<p>The Answer is Profiling.</p>
+<p>Theere&rsquo;s a famous quote by Peter Drucker (although in a completely different context) that applies here.
+&ldquo;If you can&rsquo;t measure it, you can&rsquo;t improve it&rdquo;. So in order to improve our kernel we must peek through the curtain to see what&rsquo;s actually happening. In this guide we will speedrun NVIDIA Nsight compute or <code>ncu</code>.</p>
+<br>
+<p>Before we start, as you might have guessed this post requires basic CUDA and GPU architecture knowledge. For everything else we&rsquo;ll try to explain the concepts as we go.</p>
+<p>Also we will only cover the CLI part of ncu, there&rsquo;s a nice UI that comes bundled with it which is <strong>not</strong> be covered. Don&rsquo;t worry though, CLI is more than enough.</p>
+<p>Let&rsquo;s dive in! 🚀</p>
+<hr>
+<h2 id="table-of-contents">Table of Contents</h2>
+<ol>
+<li><a href="#getting-started">Getting Started with Nsight Compute</a></li>
+<li><a href="#output-sections">Understanding the Output Sections</a></li>
+<li><a href="#critical-metrics">The Critical Metrics</a></li>
+<li><a href="#identifying-bottlenecks">Identifying Bottlenecks</a></li>
+<li><a href="#optimization-workflows">Optimization Workflows</a></li>
+<li><a href="#case-study">Case Study: Vector Addition</a></li>
+<li><a href="#common-patterns">Common Patterns</a></li>
+<li><a href="#advanced-metrics">Advanced Metrics</a></li>
+<li><a href="#troubleshooting">Troubleshooting</a></li>
+</ol>
+<hr>
+<h2 id="getting-started">Getting Started with Nsight Compute</h2>
+<h3 id="installation">Installation</h3>
+<p>Nsight Compute or <code>ncu</code> should come installed with your CUDA Toolkit. Check your installation by running <code>ncu --version</code>.</p>
+<pre tabindex="0"><code>$ ncu --version
+NVIDIA (R) Nsight Compute Command Line Profiler
+Copyright (c) 2018-2025 NVIDIA Corporation
+Version 2025.3.1.0 (build 36398880) (public-release)
+</code></pre><p>If it&rsquo;s not installed, grab it from <a href="https://developer.nvidia.com/tools-overview/nsight-compute/get-started">https://developer.nvidia.com/tools-overview/nsight-compute/get-started</a></p>
+<h3 id="basic-usage">Basic Usage</h3>
+<p>Profiling CUDA kernels with <code>ncu</code> is as simple as running:</p>
+<pre tabindex="0"><code>ncu ./your_program
+</code></pre><p>Which profiles you program with the default metric set. In case you wanted all the details in the world, run:</p>
+<pre tabindex="0"><code>ncu --set full ./your_program
+</code></pre><p>You have multiple Kernels? Don&rsquo;t worry. Just specify the <code>--kernel-name</code>.</p>
+<pre tabindex="0"><code>ncu --kernel-name vectorAddKernel ./your_program
+</code></pre><p>Generate and save your report for analysis (more on this later).</p>
+<pre tabindex="0"><code>ncu -o report ./your_program
+</code></pre><!-- 
+### Common Options
+
+```bash
+# Profile first 3 kernel launches only
+ncu --launch-count 3 ./program
+
+# Target specific metrics
+ncu --metrics sm__throughput.avg.pct_of_peak_sustained_elapsed \
+    ./program
+
+# Export as CSV
+ncu --csv ./program > metrics.csv
+
+# Quiet output (less verbose)
+ncu --quiet ./program
+``` -->
+<hr>
+<h2 id="output-sections">Understanding the Output Sections</h2>
+<p>Alright, Let&rsquo;s do a real profiling session. Here&rsquo;s a simple CUDA kernel that adds two vectors together:</p>
+<pre tabindex="0"><code></code></pre><pre tabindex="0"><code>==PROF== Connected to process 41660 (./vector_add.exe)
+==PROF== Profiling &#34;vectorAddKernel&#34; - 0: 0%....50%....100% - 8 passes
+
+[41660] vector_add.exe@127.0.0.1
+  vectorAddKernel(const float *, const float *, float *, int) 
+  (65535, 1, 1)x(256, 1, 1), Context 1, Stream 7, Device 0, CC 8.9
+  
+    Section: GPU Speed Of Light Throughput
+    Section: Launch Statistics  
+    Section: Occupancy
+    Section: GPU and Memory Workload Distribution
+</code></pre><p>Nsight Compute organizes output into <strong>sections</strong>. Let&rsquo;s break down each one.</p>
+<hr>
+<h2 id="section-1-gpu-speed-of-light-throughput">Section 1: GPU Speed Of Light Throughput</h2>
+<h3 id="what-it-shows">What It Shows</h3>
+<p>The <strong>most important section</strong> - tells you what&rsquo;s limiting your kernel.</p>
+<h3 id="example-output">Example Output</h3>
+<pre tabindex="0"><code>Section: GPU Speed Of Light Throughput
+----------------------- ----------- ------------
+Metric Name             Metric Unit Metric Value
+----------------------- ----------- ------------
+DRAM Frequency                  Ghz        10.24
+SM Frequency                    Ghz         2.23
+Elapsed Cycles                cycle      474,348
+Memory Throughput                 %        94.30  ← KEY!
+DRAM Throughput                   %        94.30  ← KEY!
+Duration                         us       212.61
+L1/TEX Cache Throughput           %         8.85
+L2 Cache Throughput               %        33.81
+SM Active Cycles              cycle   390,062.12
+Compute (SM) Throughput           %         6.92  ← KEY!
+----------------------- ----------- ------------
+</code></pre><h3 id="metric-breakdown">Metric Breakdown</h3>
+<h4 id="-memory-throughput-9430">🔥 <strong>Memory Throughput: 94.30%</strong></h4>
+<pre tabindex="0"><code>What it means:
+  You&#39;re using 94.3% of theoretical peak memory bandwidth
+  
+How to interpret:
+  ✅ 80-100%:  Memory is saturated (bottleneck!)
+  ⚠️  50-80%:  Memory is busy but not maxed
+  ✅ 0-50%:   Memory is not the bottleneck
+
+Your value: 94.30% → MEMORY-BOUND kernel ✅
+</code></pre><p><strong>Translation:</strong> Your kernel is waiting for data from memory. It&rsquo;s maxed out on memory bandwidth.</p>
+<h4 id="-compute-sm-throughput-692">🔥 <strong>Compute (SM) Throughput: 6.92%</strong></h4>
+<pre tabindex="0"><code>What it means:
+  Only 7% of your compute units are busy
+  93% of compute is idle!
+  
+How to interpret:
+  ✅ 80-100%:  Compute-bound (good for complex math)
+  ⚠️  20-80%:  Mixed workload
+  ⚠️  0-20%:   Compute is idle (memory-bound)
+
+Your value: 6.92% → Confirms memory-bound
+</code></pre><p><strong>Translation:</strong> Your ALUs (arithmetic units) are sitting idle waiting for memory. The compute is trivial compared to memory access time.</p>
+<h4 id="the-rule-of-thumb"><strong>The Rule of Thumb</strong></h4>
+<pre tabindex="0"><code>High Memory Throughput (&gt;80%) + Low Compute (&lt;20%):
+  └─ MEMORY-BOUND kernel
+  └─ Optimize: Memory access patterns
+
+Low Memory (&lt;50%) + High Compute (&gt;80%):
+  └─ COMPUTE-BOUND kernel  
+  └─ Optimize: Algorithm, use faster math
+
+Both Low:
+  └─ LATENCY-BOUND kernel
+  └─ Optimize: Increase occupancy, hide latency
+</code></pre><h4 id="other-important-metrics"><strong>Other Important Metrics</strong></h4>
+<p><strong>Elapsed Cycles: 474,348</strong></p>
+<pre tabindex="0"><code>Total cycles the kernel took
+Duration = Elapsed Cycles / SM Frequency
+474,348 / 2.23 GHz = 212.61 μs ✅
+</code></pre><p><strong>L1/TEX Cache Throughput: 8.85%</strong></p>
+<pre tabindex="0"><code>Low value → Not much data reuse from L1
+Expected for streaming workloads
+</code></pre><p><strong>L2 Cache Throughput: 33.81%</strong></p>
+<pre tabindex="0"><code>Moderate usage of L2 cache
+Some data reuse happening
+</code></pre><h3 id="-interpretation-summary">📊 Interpretation Summary</h3>
+<pre tabindex="0"><code>┌─────────────────────────────────────────────────┐
+│  Your Kernel Profile:                           │
+├─────────────────────────────────────────────────┤
+│  Memory Throughput:  94.30% → SATURATED! 🔴    │
+│  Compute Throughput:  6.92% → Idle 🟢          │
+│  Conclusion: MEMORY-BOUND                       │
+│                                                  │
+│  What this means:                               │
+│  • Memory is the bottleneck                     │
+│  • Can&#39;t go much faster without:               │
+│    - Better memory access patterns              │
+│    - Different algorithm                        │
+│    - Faster GPU with more bandwidth             │
+└─────────────────────────────────────────────────┘
+</code></pre><hr>
+<h2 id="section-2-launch-statistics">Section 2: Launch Statistics</h2>
+<h3 id="what-it-shows-1">What It Shows</h3>
+<p>Configuration of your kernel launch - how you set up the grid and blocks.</p>
+<h3 id="example-output-1">Example Output</h3>
+<pre tabindex="0"><code>Section: Launch Statistics
+-------------------------------- --------------- ---------------
+Metric Name                          Metric Unit    Metric Value
+-------------------------------- --------------- ---------------
+Block Size                                                   256  ← Threads per block
+Function Cache Configuration                     CachePreferNone
+Grid Size                                                 65,535  ← Number of blocks
+Registers Per Thread             register/thread              16  ← Resource usage
+Shared Memory Configuration Size           Kbyte           16.38
+Driver Shared Memory Per Block       Kbyte/block            1.02
+Dynamic Shared Memory Per Block       byte/block               0  ← You&#39;re not using any
+Static Shared Memory Per Block        byte/block               0
+# SMs                                         SM             128  ← GPU has 128 SMs
+Stack Size                                                 1,024
+Threads                                   thread      16,776,960  ← Total threads
+# TPCs                                                        64
+Enabled TPC IDs                                              all
+Uses Green Context                                             0
+Waves Per SM                                               85.33  ← Important!
+-------------------------------- --------------- ---------------
+</code></pre><h3 id="key-metrics-explained">Key Metrics Explained</h3>
+<h4 id="block-size-256"><strong>Block Size: 256</strong></h4>
+<pre tabindex="0"><code>Your choice when launching kernel:
+kernel&lt;&lt;&lt;grid, block&gt;&gt;&gt;(...);
+           └─ block = 256 threads
+
+Guidelines:
+  ✅ Multiple of 32 (warp size)
+  ✅ 128-512 is typical
+  ⚠️  Too small (&lt;64): Underutilizes GPU
+  ⚠️  Too large (&gt;1024): May limit occupancy
+
+Your value: 256 ✅ Good choice!
+</code></pre><h4 id="grid-size-65535"><strong>Grid Size: 65,535</strong></h4>
+<pre tabindex="0"><code>Number of blocks launched:
+kernel&lt;&lt;&lt;grid, block&gt;&gt;&gt;(...);
+           └─ grid = 65,535 blocks
+
+Total threads = Grid × Block
+              = 65,535 × 256
+              = 16,776,960 threads ✅
+</code></pre><h4 id="registers-per-thread-16"><strong>Registers Per Thread: 16</strong></h4>
+<pre tabindex="0"><code>How many registers each thread uses
+
+Impact on occupancy:
+  ✅ &lt;32:  Excellent (low resource usage)
+  ✅ 32-64: Good
+  ⚠️  64-128: May limit occupancy
+  ❌ &gt;128: Likely limits occupancy
+
+Your value: 16 ✅ Excellent! Very low resource usage
+</code></pre><p><strong>Why it matters:</strong> Registers are a limited resource. The RTX 4090 has 65,536 registers per SM. If each thread uses many registers, fewer threads can fit on the SM.</p>
+<h4 id="shared-memory-per-block-0-bytes"><strong>Shared Memory Per Block: 0 bytes</strong></h4>
+<pre tabindex="0"><code>Dynamic + Static = 0 + 0 = 0 bytes used
+
+You&#39;re not using shared memory (yet!)
+Opportunity for optimization if data is reused
+</code></pre><h4 id="-waves-per-sm-8533">🔥 <strong>Waves Per SM: 85.33</strong></h4>
+<pre tabindex="0"><code>What it means:
+  Each SM processes 85.33 &#34;waves&#34; of blocks
+  
+Calculation:
+  Total blocks: 65,535
+  SMs: 128
+  Blocks per SM: 65,535 / 128 = 511.8
+  
+  Max concurrent blocks per SM: 6 (from occupancy limits)
+  Waves: 511.8 / 6 = 85.3 ✅
+
+Interpretation:
+  High wave count → Work well distributed
+  Low wave count → May have load imbalance
+</code></pre><h3 id="configuration-sanity-checks">Configuration Sanity Checks</h3>
+<pre tabindex="0"><code>✅ Block size is multiple of 32
+✅ Total threads ≥ data elements (16M elements)
+✅ Registers per thread is low (&lt;32)
+✅ Waves &gt; 1 (workload is significant)
+✅ Grid size doesn&#39;t exceed limits (max 2^31-1)
+</code></pre><hr>
+<h2 id="section-3-occupancy">Section 3: Occupancy</h2>
+<h3 id="what-it-shows-2">What It Shows</h3>
+<p><strong>How well you&rsquo;re utilizing the GPU&rsquo;s ability to run multiple threads/warps simultaneously.</strong></p>
+<p>This is <strong>critical</strong> for hiding memory latency!</p>
+<h3 id="example-output-2">Example Output</h3>
+<pre tabindex="0"><code>Section: Occupancy
+------------------------------- ----------- ------------
+Metric Name                     Metric Unit Metric Value
+------------------------------- ----------- ------------
+Block Limit SM                        block           24
+Block Limit Registers                 block           16  ← Limited by registers
+Block Limit Shared Mem                block           16
+Block Limit Warps                     block            6  ← LIMITING FACTOR!
+Theoretical Active Warps per SM        warp           48
+Theoretical Occupancy                     %          100
+Achieved Occupancy                        %        87.89  ← Actual performance
+Achieved Active Warps Per SM           warp        42.19
+------------------------------- ----------- ------------
+
+OPT   Est. Local Speedup: 12.11%
+      The difference between theoretical (100.0%) and achieved (87.9%) 
+      can be the result of warp scheduling overheads or workload 
+      imbalances during kernel execution.
+</code></pre><h3 id="understanding-occupancy-limits">Understanding Occupancy Limits</h3>
+<h4 id="block-limits-what-could-fit"><strong>Block Limits</strong> (What could fit?)</h4>
+<p>Your GPU could theoretically fit:</p>
+<pre tabindex="0"><code>Block Limit SM:          24 blocks (if no other constraints)
+Block Limit Registers:   16 blocks (limited by register usage)
+Block Limit Shared Mem:  16 blocks (limited by shared memory)
+Block Limit Warps:        6 blocks ← THE LIMITING FACTOR!
+</code></pre><p><strong>The bottleneck:</strong> Your block size of 256 threads = 8 warps per block. The SM can hold max 48 warps, so: <code>48 warps / 8 warps per block = 6 blocks max</code> <strong>← This is the constraint!</strong></p>
+<h4 id="theoretical-occupancy-100"><strong>Theoretical Occupancy: 100%</strong></h4>
+<pre tabindex="0"><code>If everything was perfect:
+  Max warps per SM: 48
+  Your block could fill: 6 blocks × 8 warps = 48 warps
+  Theoretical: 48 / 48 = 100%
+</code></pre><h4 id="-achieved-occupancy-8789">🔥 <strong>Achieved Occupancy: 87.89%</strong></h4>
+<pre tabindex="0"><code>What actually happened:
+  Average active warps: 42.19 (out of 48 max)
+  Achieved: 42.19 / 48 = 87.89%
+
+Rating:
+  ✅ &gt;90%:  Excellent
+  ✅ 75-90%: Very good (your case!)
+  ⚠️  50-75%: Good, room for improvement
+  ⚠️  25-50%: Moderate, likely performance issues
+  ❌ &lt;25%:  Poor, definitely a problem
+
+Your value: 87.89% → VERY GOOD! ✅
+</code></pre><h3 id="why-not-100">Why Not 100%?</h3>
+<p>The <strong>12% gap</strong> comes from:</p>
+<pre tabindex="0"><code>1. Memory Stalls (biggest factor)
+   └─ Warps waiting for data from DRAM
+   └─ ~200-300 cycle latency per memory access
+   
+2. Warp Scheduling Overhead
+   └─ GPU scheduler needs cycles to switch warps
+   
+3. Synchronization Points
+   └─ __syncthreads() causes warps to wait
+   
+4. Instruction Dependencies
+   └─ Some instructions depend on previous results
+   
+5. Workload Imbalance
+   └─ Some warps finish early, others keep running
+</code></pre><h3 id="the-12-potential-speedup">The 12% Potential Speedup</h3>
+<pre tabindex="0"><code>OPT   Est. Local Speedup: 12.11%
+</code></pre><p><strong>What this means:</strong> If you could achieve 100% occupancy (perfect), you might see up to 12% speedup. However, this is theoretical and often not achievable.</p>
+<h3 id="optimization-strategies-for-occupancy">Optimization Strategies for Occupancy</h3>
+<pre tabindex="0"><code>To increase occupancy:
+
+1. Reduce register usage
+   └─ Use -maxrregcount=N compiler flag
+   └─ Simplify computation
+   └─ Split into multiple kernels
+
+2. Reduce shared memory usage
+   └─ Use smaller tiles
+   └─ Recalculate instead of store
+
+3. Adjust block size
+   └─ Try 128, 256, 512 threads
+   └─ Profile each to find sweet spot
+
+4. Increase workload size
+   └─ More blocks → better GPU utilization
+</code></pre><p><strong>Important:</strong> Don&rsquo;t chase 100% occupancy blindly!</p>
+<ul>
+<li>87% is already very good</li>
+<li>Optimizing further may hurt other aspects</li>
+<li>Balance occupancy with memory coalescing</li>
+</ul>
+<hr>
+<h2 id="section-4-gpu-and-memory-workload-distribution">Section 4: GPU and Memory Workload Distribution</h2>
+<h3 id="what-it-shows-3">What It Shows</h3>
+<p>How different parts of the GPU (DRAM, L1, L2, SMs) were utilized during execution.</p>
+<h3 id="example-output-3">Example Output</h3>
+<pre tabindex="0"><code>Section: GPU and Memory Workload Distribution
+--------------------------- ----------- ------------
+Metric Name                 Metric Unit Metric Value
+--------------------------- ----------- ------------
+Average DRAM Active Cycles        cycle 2,052,717.33  ← DRAM was busy
+Total DRAM Elapsed Cycles         cycle  26,121,216   ← Total time available
+Average L1 Active Cycles          cycle   390,062.12
+Total L1 Elapsed Cycles           cycle  60,640,428
+Average L2 Active Cycles          cycle   344,730.67
+Total L2 Elapsed Cycles           cycle  14,909,940
+Average SM Active Cycles          cycle   390,062.12
+Total SM Elapsed Cycles           cycle  60,640,428
+Average SMSP Active Cycles        cycle   389,666.42
+Total SMSP Elapsed Cycles         cycle 242,561,712
+--------------------------- ----------- ------------
+</code></pre><h3 id="understanding-active-vs-elapsed">Understanding Active vs Elapsed</h3>
+<h4 id="concept"><strong>Concept:</strong></h4>
+<pre tabindex="0"><code>Elapsed Cycles: Total time the unit was &#34;available&#34;
+Active Cycles:  Time the unit was actually &#34;doing work&#34;
+
+Utilization = Active / (Elapsed / # Units)
+</code></pre><h4 id="dram-utilization"><strong>DRAM Utilization</strong></h4>
+<pre tabindex="0"><code>Average DRAM Active Cycles:  2,052,717.33
+Total DRAM Elapsed Cycles:   26,121,216
+
+RTX 4090 has 12 memory partitions (384-bit / 32-bit)
+Per partition: 26,121,216 / 12 = 2,176,768 cycles
+
+Utilization: 2,052,717 / 2,176,768 = 94.3%
+
+This matches &#34;Memory Throughput: 94.30%&#34; ✅
+</code></pre><p><strong>Interpretation:</strong> Your DRAM is <strong>94% saturated</strong>. Memory is definitely the bottleneck!</p>
+<h4 id="l1-cache-utilization"><strong>L1 Cache Utilization</strong></h4>
+<pre tabindex="0"><code>Active: 390,062 cycles
+Elapsed: 60,640,428 cycles (across all L1 caches)
+
+Low utilization → Not much L1 cache reuse
+Expected for streaming memory patterns
+</code></pre><h4 id="sm-compute-utilization"><strong>SM (Compute) Utilization</strong></h4>
+<pre tabindex="0"><code>Active: 390,062 cycles (doing compute)
+Elapsed: 60,640,428 cycles (available time)
+
+Low utilization → Compute is idle most of the time
+Confirms compute-bound observation (6.92%)
+</code></pre><h3 id="what-these-numbers-tell-you">What These Numbers Tell You</h3>
+<pre tabindex="0"><code>┌──────────────────────────────────────────────┐
+│  Workload Analysis                           │
+├──────────────────────────────────────────────┤
+│  DRAM:    94% utilized → BOTTLENECK! 🔴     │
+│  L1:      Low activity → No L1 reuse 🟡     │
+│  L2:      33% utilized → Some L2 reuse 🟢   │
+│  SM:      Low activity → Waiting for data 🟡│
+│                                               │
+│  Conclusion: Memory-bound, streaming workload│
+└──────────────────────────────────────────────┘
+</code></pre><hr>
+<h2 id="critical-metrics">The Critical Metrics (Quick Reference)</h2>
+<h3 id="the-big-three-">The Big Three 🎯</h3>
+<pre tabindex="0"><code>1. Memory Throughput
+   └─ &gt;80% → Memory-bound ✅ for simple ops
+   └─ &lt;50% → Not memory-bound
+
+2. Compute Throughput  
+   └─ &gt;80% → Compute-bound ✅ for complex math
+   └─ &lt;20% → Compute is idle
+
+3. Achieved Occupancy
+   └─ &gt;75% → Good ✅
+   └─ &lt;50% → May have issues
+</code></pre><h3 id="decision-tree">Decision Tree</h3>
+<pre tabindex="0"><code>                 Start Here
+                     │
+          ┌──────────┴──────────┐
+          │                     │
+    Memory Thru &gt;80%?     Compute Thru &gt;80%?
+          │                     │
+         YES                   YES
+          │                     │
+    MEMORY-BOUND          COMPUTE-BOUND
+          │                     │
+    Optimize:              Optimize:
+    • Access patterns      • Algorithm
+    • Coalescing          • Use faster math
+    • Cache reuse         • Tensor cores
+          │                     │
+          └──────────┬──────────┘
+                     │
+              Both &lt;80%?
+                     │
+                    YES
+                     │
+              LATENCY-BOUND
+                     │
+              Optimize:
+              • Increase occupancy
+              • More blocks/threads
+              • Hide latency
+</code></pre><hr>
+<h2 id="identifying-bottlenecks">Identifying Bottlenecks</h2>
+<h3 id="memory-bound-pattern">Memory-Bound Pattern</h3>
+<pre tabindex="0"><code>Symptoms:
+  ✓ Memory Throughput: &gt;80%
+  ✓ Compute Throughput: &lt;20%
+  ✓ Low L1/L2 cache hit rates
+  ✓ Simple arithmetic operations
+
+Example: Vector addition, memory copies, reductions
+
+Solutions:
+  1. Ensure coalesced memory access
+  2. Use shared memory for reuse
+  3. Increase arithmetic intensity
+  4. Fuse multiple operations
+</code></pre><h3 id="compute-bound-pattern">Compute-Bound Pattern</h3>
+<pre tabindex="0"><code>Symptoms:
+  ✓ Compute Throughput: &gt;80%
+  ✓ Memory Throughput: &lt;50%
+  ✓ Complex math operations
+  ✓ Many FLOPs per memory access
+
+Example: Matrix multiplication, FFT, complex math
+
+Solutions:
+  1. Use Tensor Cores (for matrix ops)
+  2. Use faster math (-use_fast_math)
+  3. Optimize algorithm
+  4. Use specialized libraries (cuBLAS, cuFFT)
+</code></pre><h3 id="latency-bound-pattern">Latency-Bound Pattern</h3>
+<pre tabindex="0"><code>Symptoms:
+  ✓ Both Memory &amp; Compute: &lt;50%
+  ✓ Low occupancy (&lt;50%)
+  ✓ Small workload size
+  ✓ Too few blocks/threads
+
+Example: Small data, few threads, frequent sync
+
+Solutions:
+  1. Increase occupancy
+     └─ More blocks, larger grid
+  2. Reduce resource usage
+     └─ Fewer registers, less shared memory
+  3. Reduce synchronization
+  4. Batch multiple operations
+</code></pre><h3 id="occupancy-limited-pattern">Occupancy-Limited Pattern</h3>
+<pre tabindex="0"><code>Symptoms:
+  ✓ Achieved Occupancy: &lt;50%
+  ✓ High register usage (&gt;64 per thread)
+  ✓ High shared memory usage (&gt;48 KB per block)
+  ✓ Large block size (&gt;512 threads)
+
+Solutions:
+  1. Reduce registers
+     └─ -maxrregcount=N flag
+  2. Reduce shared memory
+     └─ Smaller tiles
+  3. Adjust block size
+     └─ Try different sizes (128, 256, 512)
+  4. Launch more blocks
+</code></pre><hr>
+<h2 id="case-study">Case Study: Vector Addition</h2>
+<p>Let&rsquo;s analyze a complete profiling session step-by-step.</p>
+<h3 id="the-kernel">The Kernel</h3>
+<pre tabindex="0"><code class="language-cuda" data-lang="cuda">__global__ void vectorAddKernel(const float *a, const float *b, 
+                                float *c, int n) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx &lt; n) {
+        c[idx] = a[idx] + b[idx];
+    }
+}
+
+// Launch: 16M elements
+int n = 1 &lt;&lt; 24;  // 16,777,216 elements
+int blockSize = 256;
+int gridSize = (n + blockSize - 1) / blockSize;  // 65,536 blocks
+vectorAddKernel&lt;&lt;&lt;gridSize, blockSize&gt;&gt;&gt;(d_a, d_b, d_c, n);
+</code></pre><h3 id="the-profiling-command">The Profiling Command</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>ncu --set full ./vector_add
+</span></span></code></pre></div><h3 id="analysis-walkthrough">Analysis Walkthrough</h3>
+<h4 id="step-1-check-speed-of-light">Step 1: Check Speed of Light</h4>
+<pre tabindex="0"><code>Memory Throughput:  94.30% 🔴
+Compute Throughput:  6.92% 🟢
+
+Immediate conclusion: MEMORY-BOUND!
+</code></pre><p><strong>Why this makes sense:</strong></p>
+<pre tabindex="0"><code>Operation per element:
+  • Read a[i]:  4 bytes, ~200 cycles
+  • Read b[i]:  4 bytes, ~200 cycles  
+  • Add:        1 cycle (trivial!)
+  • Write c[i]: 4 bytes, ~200 cycles
+
+Memory dominates: 3 × 200 = 600 cycles
+Compute is tiny: 1 cycle
+
+Ratio: 600:1 memory to compute!
+</code></pre><h4 id="step-2-check-launch-configuration">Step 2: Check Launch Configuration</h4>
+<pre tabindex="0"><code>Block Size:           256 ✅ Good (multiple of 32)
+Grid Size:            65,535 ✅ Enough blocks
+Registers Per Thread: 16 ✅ Excellent (very low)
+Shared Memory:        0 bytes ✅ Not needed here
+Waves Per SM:         85.33 ✅ High (well distributed)
+</code></pre><p><strong>Assessment:</strong> Launch configuration is optimal!</p>
+<h4 id="step-3-check-occupancy">Step 3: Check Occupancy</h4>
+<pre tabindex="0"><code>Theoretical Occupancy: 100%
+Achieved Occupancy:    87.89% ✅
+
+Gap: 12.11%
+Reason: Memory stalls (warps waiting for data)
+</code></pre><p><strong>Assessment:</strong> Occupancy is very good. The 12% gap is expected for memory-bound kernels.</p>
+<h4 id="step-4-check-memory-workload">Step 4: Check Memory Workload</h4>
+<pre tabindex="0"><code>DRAM Active/Elapsed: 94.3% 🔴 Saturated!
+L1 Activity:         Low 🟡 (streaming, no reuse)
+L2 Activity:         33% 🟢 (some reuse)
+SM Activity:         Low 🟡 (waiting for memory)
+</code></pre><p><strong>Assessment:</strong> DRAM is the clear bottleneck.</p>
+<h4 id="step-5-check-memory-access-pattern">Step 5: Check Memory Access Pattern</h4>
+<pre tabindex="0"><code>(Would need more detailed metrics, but we know from code:)
+
+Memory Access Pattern:
+  idx = blockIdx.x * blockDim.x + threadIdx.x;
+  c[idx] = a[idx] + b[idx];
+  
+Sequential access! ✅
+  └─ Perfect coalescing
+  └─ All warps access consecutive addresses
+</code></pre><h3 id="final-verdict">Final Verdict</h3>
+<pre tabindex="0"><code>┌─────────────────────────────────────────────────┐
+│  Vector Addition Performance Summary            │
+├─────────────────────────────────────────────────┤
+│  Status:      OPTIMAL ✅                        │
+│  Bottleneck:  Memory bandwidth (expected)       │
+│  Achieved:    94% of theoretical peak           │
+│                                                  │
+│  Why optimal:                                   │
+│  ✓ Sequential access (coalesced)               │
+│  ✓ Low register usage                           │
+│  ✓ Good occupancy (87%)                         │
+│  ✓ Memory saturated (can&#39;t go faster)          │
+│                                                  │
+│  Can we optimize further?                       │
+│  └─ Not without changing algorithm              │
+│      Options:                                   │
+│      • Fuse with other operations               │
+│      • Use faster GPU with more bandwidth       │
+│      • Accept that vector add is memory-bound   │
+└─────────────────────────────────────────────────┘
+</code></pre><h3 id="cpu-vs-gpu-timing-mystery-solved">CPU vs GPU Timing Mystery Solved</h3>
+<p><strong>User&rsquo;s original question:</strong></p>
+<pre tabindex="0"><code>Time (CPU timing):      92.2359 ms
+Bandwidth calculated:   2.03 GB/s  ← Seems terrible?
+
+Time (GPU kernel only): 0.21261 ms
+Memory throughput:      94.3% of 1,008 GB/s = 950 GB/s ← Actually excellent!
+</code></pre><p><strong>What happened?</strong></p>
+<pre tabindex="0"><code>CPU timing includes EVERYTHING:
+  ├─ cudaMalloc            ~1 ms
+  ├─ Host→Device transfer  ~40 ms (64 MB over PCIe)
+  ├─ Kernel execution      ~0.21 ms ← Only this is GPU work!
+  ├─ Device→Host transfer  ~40 ms
+  ├─ cudaDeviceSynchronize ~10 ms
+  └─ Other overhead        ~1 ms
+  ──────────────────────
+  Total: ~92 ms
+
+The kernel itself is incredibly fast (0.21 ms)!
+But data transfers dominate the total time.
+</code></pre><p><strong>Lesson:</strong> Always profile the kernel specifically, not just end-to-end timing!</p>
+<hr>
+<h2 id="common-patterns">Common Patterns and What They Mean</h2>
+<h3 id="pattern-1-perfect-compute-bound">Pattern 1: Perfect Compute-Bound</h3>
+<pre tabindex="0"><code>Memory Throughput:  15%
+Compute Throughput: 95%
+Achieved Occupancy: 85%
+
+Interpretation:
+  • Kernel is doing heavy computation
+  • Memory is not the bottleneck
+  • Likely complex math operations
+  
+Example: Matrix multiplication, convolution, FFT
+
+Optimization:
+  ✓ This is already good for compute-heavy workloads
+  • Consider using Tensor Cores
+  • Use -use_fast_math for approximations
+  • Check if specialized libraries exist
+</code></pre><h3 id="pattern-2-terrible-access-pattern">Pattern 2: Terrible Access Pattern</h3>
+<pre tabindex="0"><code>Memory Throughput:  30%
+Compute Throughput:  5%
+Achieved Occupancy: 90%
+L1/L2 Hit Rate:     &lt;10%
+
+Interpretation:
+  • Memory is being accessed inefficiently
+  • Likely random or strided access
+  • Poor coalescing
+  • Cache thrashing
+  
+Example: Random lookups, large strides, transpose
+
+Optimization:
+  ❌ Fix memory access pattern immediately!
+  • Use sequential access
+  • Use shared memory for complex patterns
+  • Consider data layout changes (AoS → SoA)
+</code></pre><h3 id="pattern-3-occupancy-problem">Pattern 3: Occupancy Problem</h3>
+<pre tabindex="0"><code>Memory Throughput:  40%
+Compute Throughput: 30%
+Achieved Occupancy: 25%  ← TOO LOW!
+Registers Per Thread: 128
+
+Interpretation:
+  • Too few warps active
+  • High register usage limiting occupancy
+  • GPU is underutilized
+  
+Optimization:
+  1. Reduce register usage
+     └─ nvcc -maxrregcount=64
+  2. Increase block/grid size
+  3. Split complex kernel into multiple passes
+</code></pre><h3 id="pattern-4-small-workload">Pattern 4: Small Workload</h3>
+<pre tabindex="0"><code>Memory Throughput:  25%
+Compute Throughput: 20%
+Achieved Occupancy: 90%
+Waves Per SM:       0.5  ← Very low!
+
+Interpretation:
+  • Workload is too small
+  • GPU is underutilized
+  • Kernel launch overhead dominates
+  
+Optimization:
+  • Increase problem size
+  • Batch multiple operations
+  • Consider CPU for small workloads
+  • Fuse multiple kernels
+</code></pre><h3 id="pattern-5-perfect-balance">Pattern 5: Perfect Balance</h3>
+<pre tabindex="0"><code>Memory Throughput:  65%
+Compute Throughput: 75%
+Achieved Occupancy: 85%
+L2 Hit Rate:        50%
+
+Interpretation:
+  • Balanced workload
+  • Good cache utilization
+  • Both memory and compute are utilized
+  
+Example: Well-optimized matrix operations, 
+         kernels with good arithmetic intensity
+
+This is the sweet spot! ✅
+</code></pre><hr>
+<h2 id="optimization-workflows">Optimization Workflows</h2>
+<h3 id="workflow-1-memory-bound-kernel">Workflow 1: Memory-Bound Kernel</h3>
+<pre tabindex="0"><code>Step 1: Confirm memory is the bottleneck
+  └─ Memory Throughput &gt;80%? ✓
+
+Step 2: Check access pattern
+  ncu --metrics l1tex__t_sectors_pipe_lsu_mem_global_op_ld.sum
+
+  Ideal: sectors_read ≈ (bytes_read / 32)
+  If much higher: Poor coalescing!
+
+Step 3: Check L2 cache hit rate
+  ncu --metrics lts__t_sector_hit_rate.pct
+  
+  &lt;30%: No data reuse
+  30-70%: Some reuse
+  &gt;70%: Good reuse
+
+Step 4: Optimize
+  A. Fix coalescing (sequential access)
+  B. Use shared memory for reused data
+  C. Increase arithmetic intensity (fuse ops)
+  D. Consider different algorithm
+
+Step 5: Re-profile and compare
+</code></pre><h3 id="workflow-2-occupancy-limited">Workflow 2: Occupancy-Limited</h3>
+<pre tabindex="0"><code>Step 1: Identify limitation
+  Look at Block Limit metrics:
+  • Block Limit Registers: X
+  • Block Limit Shared Mem: Y
+  • Block Limit Warps: Z
+  
+  Minimum is your constraint!
+
+Step 2: If limited by registers
+  A. Compile with -maxrregcount=N
+  B. Simplify computation
+  C. Split into multiple kernels
+  D. Use more blocks with fewer threads
+
+Step 3: If limited by shared memory
+  A. Reduce tile sizes
+  B. Use multiple kernel passes
+  C. Recalculate instead of storing
+
+Step 4: If limited by warps
+  A. Reduce block size
+  B. Increase number of blocks
+
+Step 5: Re-profile and check
+  └─ Achieved Occupancy improved?
+</code></pre><h3 id="workflow-3-compute-bound-kernel">Workflow 3: Compute-Bound Kernel</h3>
+<pre tabindex="0"><code>Step 1: Confirm compute is bottleneck
+  └─ Compute Throughput &gt;80%? ✓
+
+Step 2: Check if math can be approximated
+  • sin, cos, log, exp → use fast versions
+  • Compile with -use_fast_math
+
+Step 3: Check for Tensor Core opportunity
+  • Matrix multiplication?
+  • Use WMMA or cuBLAS
+
+Step 4: Check instruction mix
+  ncu --metrics smsp__sass_thread_inst_executed_op_fadd_pred_on.sum
+  
+  • Lots of transcendentals? Consider lookup tables
+  • Integer/FP conversion overhead? Reduce conversions
+
+Step 5: Profile algorithm complexity
+  • Can you reduce operations?
+  • Better algorithm exists?
+</code></pre><hr>
+<h2 id="advanced-metrics">Advanced Metrics</h2>
+<h3 id="memory-coalescing-metrics">Memory Coalescing Metrics</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e"># Check memory transaction efficiency</span>
+</span></span><span style="display:flex;"><span>ncu --metrics l1tex__t_sectors_pipe_lsu_mem_global_op_ld.sum,<span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span><span style="color:#ae81ff"></span>              l1tex__t_sectors_pipe_lsu_mem_global_op_st.sum <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span><span style="color:#ae81ff"></span>    ./program
+</span></span></code></pre></div><p><strong>Interpretation:</strong></p>
+<pre tabindex="0"><code>Ideal coalescing:
+  Sectors ≈ (Total Bytes Accessed / 32)
+
+Poor coalescing:
+  Sectors &gt;&gt; (Total Bytes Accessed / 32)
+  └─ You&#39;re loading extra data unnecessarily
+</code></pre><h3 id="cache-hit-rates">Cache Hit Rates</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e"># L2 cache hit rate</span>
+</span></span><span style="display:flex;"><span>ncu --metrics lts__t_sector_hit_rate.pct ./program
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># L1 cache hit rate  </span>
+</span></span><span style="display:flex;"><span>ncu --metrics l1tex__t_sector_hit_rate.pct ./program
+</span></span></code></pre></div><p><strong>What good looks like:</strong></p>
+<pre tabindex="0"><code>L2 Hit Rate:
+  &gt;70%: Excellent data reuse
+  40-70%: Good
+  &lt;40%: Poor reuse (streaming workload)
+
+L1 Hit Rate:
+  &gt;50%: Excellent
+  20-50%: Moderate
+  &lt;20%: Poor (but OK for streaming)
+</code></pre><h3 id="warp-execution-efficiency">Warp Execution Efficiency</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e"># Check for divergence</span>
+</span></span><span style="display:flex;"><span>ncu --metrics smsp__average_warp_latency_per_inst_executed.ratio <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span><span style="color:#ae81ff"></span>    ./program
+</span></span></code></pre></div><p><strong>Interpretation:</strong></p>
+<pre tabindex="0"><code>Low value: Good (no divergence)
+High value: Warps are diverging
+  └─ Branches causing serialization
+  └─ Review if-statements
+</code></pre><h3 id="roofline-model">Roofline Model</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e"># Get arithmetic intensity</span>
+</span></span><span style="display:flex;"><span>ncu --metrics sm__sass_thread_inst_executed_op_fadd_pred_on.sum,<span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span><span style="color:#ae81ff"></span>              sm__sass_thread_inst_executed_op_fmul_pred_on.sum,<span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span><span style="color:#ae81ff"></span>              dram__bytes.sum <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span><span style="color:#ae81ff"></span>    ./program
+</span></span></code></pre></div><p><strong>Calculate:</strong></p>
+<pre tabindex="0"><code>FLOPs = fadd + fmul + fma*2
+Bytes = dram__bytes.sum
+Arithmetic Intensity = FLOPs / Bytes
+
+Compare to GPU&#39;s Balance Point:
+  AI &lt; Peak_FLOPS / Peak_BW → Memory-bound
+  AI &gt; Peak_FLOPS / Peak_BW → Compute-bound
+</code></pre><hr>
+<h2 id="troubleshooting">Troubleshooting Common Issues</h2>
+<h3 id="issue-1-no-output-or-permission-denied">Issue 1: No Output or &ldquo;Permission Denied&rdquo;</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e"># On Linux, need admin privileges</span>
+</span></span><span style="display:flex;"><span>sudo ncu ./program
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Or set capabilities (one time setup)</span>
+</span></span><span style="display:flex;"><span>sudo setcap cap_sys_admin<span style="color:#f92672">=</span>ep <span style="color:#66d9ef">$(</span>which ncu<span style="color:#66d9ef">)</span>
+</span></span></code></pre></div><h3 id="issue-2-too-many-metrics">Issue 2: &ldquo;Too Many Metrics&rdquo;</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e"># Profiling might take many passes</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Reduce metric count:</span>
+</span></span><span style="display:flex;"><span>ncu --set basic ./program      <span style="color:#75715e"># Fewer metrics</span>
+</span></span><span style="display:flex;"><span>ncu --set full ./program       <span style="color:#75715e"># All metrics (slow)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Or specific metrics only:</span>
+</span></span><span style="display:flex;"><span>ncu --metrics sm__throughput.avg.pct_of_peak_sustained_elapsed <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span><span style="color:#ae81ff"></span>    ./program
+</span></span></code></pre></div><h3 id="issue-3-kernel-runs-multiple-times">Issue 3: Kernel Runs Multiple Times</h3>
+<pre tabindex="0"><code>This is normal! ncu runs kernels multiple times to collect metrics.
+
+==PROF== Profiling &#34;kernel&#34; - 0: 0%....50%....100% - 8 passes
+                                                        └─ 8 runs!
+
+Use --launch-count to limit:
+ncu --launch-count 1 ./program
+</code></pre><h3 id="issue-4-cant-find-specific-kernel">Issue 4: Can&rsquo;t Find Specific Kernel</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e"># List all kernels first</span>
+</span></span><span style="display:flex;"><span>ncu --list-kernels ./program
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Then target specific one</span>
+</span></span><span style="display:flex;"><span>ncu --kernel-name <span style="color:#e6db74">&#34;vectorAddKernel&#34;</span> ./program
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Or by index</span>
+</span></span><span style="display:flex;"><span>ncu --launch-count <span style="color:#ae81ff">1</span> --kernel-id <span style="color:#ae81ff">0</span> ./program
+</span></span></code></pre></div><h3 id="issue-5-output-too-verbose">Issue 5: Output Too Verbose</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e"># Quiet mode</span>
+</span></span><span style="display:flex;"><span>ncu --quiet ./program
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Or redirect to file</span>
+</span></span><span style="display:flex;"><span>ncu ./program &gt; profile_output.txt 2&gt;&amp;<span style="color:#ae81ff">1</span>
+</span></span></code></pre></div><h3 id="issue-6-numbers-dont-match-documentation">Issue 6: Numbers Don&rsquo;t Match Documentation</h3>
+<pre tabindex="0"><code>This is normal! 
+• Metrics vary by GPU architecture
+• Different CUDA versions report differently
+• Workload affects measurements
+
+Always compare:
+  • Same GPU
+  • Same CUDA version
+  • Similar workload size
+</code></pre><hr>
+<h2 id="practical-tips-and-best-practices">Practical Tips and Best Practices</h2>
+<h3 id="general-profiling-strategy">General Profiling Strategy</h3>
+<pre tabindex="0"><code>1. Start with high-level metrics (Speed of Light)
+2. Identify the bottleneck
+3. Dive into specific metrics
+4. Make targeted changes
+5. Re-profile and compare
+
+DON&#39;T:
+  ❌ Try to optimize everything at once
+  ❌ Chase 100% on all metrics
+  ❌ Optimize without profiling
+  ❌ Focus on micro-optimizations first
+</code></pre><h3 id="interpreting-good-vs-bad">Interpreting &ldquo;Good&rdquo; vs &ldquo;Bad&rdquo;</h3>
+<pre tabindex="0"><code>Context matters!
+
+Memory-Bound Kernel:
+  ✅ 90% memory throughput is EXCELLENT
+  ✅ 5% compute throughput is EXPECTED
+  
+Compute-Bound Kernel:
+  ✅ 90% compute throughput is EXCELLENT  
+  ✅ 20% memory throughput is EXPECTED
+
+Don&#39;t aim for 100% on everything!
+Each workload has a natural profile.
+</code></pre><h3 id="using-the-gui">Using the GUI</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e"># Generate report</span>
+</span></span><span style="display:flex;"><span>ncu -o my_report ./program
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Open in GUI (better visualization)</span>
+</span></span><span style="display:flex;"><span>ncu-ui my_report.ncu-rep
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Benefits of GUI:
+</span></span><span style="display:flex;"><span>  • Visual charts
+</span></span><span style="display:flex;"><span>  • Side-by-side comparison
+</span></span><span style="display:flex;"><span>  • Source code correlation
+</span></span><span style="display:flex;"><span>  • Easier navigation
+</span></span></code></pre></div><h3 id="comparing-beforeafter">Comparing Before/After</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e"># Before optimization</span>
+</span></span><span style="display:flex;"><span>ncu -o before ./program
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># After optimization</span>
+</span></span><span style="display:flex;"><span>ncu -o after ./program
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Compare in GUI</span>
+</span></span><span style="display:flex;"><span>ncu-ui before.ncu-rep after.ncu-rep
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Look <span style="color:#66d9ef">for</span>:
+</span></span><span style="display:flex;"><span>  • Memory throughput improvement
+</span></span><span style="display:flex;"><span>  • Occupancy changes
+</span></span><span style="display:flex;"><span>  • Duration reduction
+</span></span></code></pre></div><h3 id="automated-analysis">Automated Analysis</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e"># Export metrics as CSV</span>
+</span></span><span style="display:flex;"><span>ncu --csv ./program &gt; metrics.csv
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Then process with Python/scripts</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Good for regression testing</span>
+</span></span></code></pre></div><hr>
+<h2 id="quick-reference-card">Quick Reference Card</h2>
+<h3 id="essential-commands">Essential Commands</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e"># Basic profile</span>
+</span></span><span style="display:flex;"><span>ncu ./program
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Full metrics</span>
+</span></span><span style="display:flex;"><span>ncu --set full ./program
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Specific metrics</span>
+</span></span><span style="display:flex;"><span>ncu --metrics METRIC_NAME ./program
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Save report</span>
+</span></span><span style="display:flex;"><span>ncu -o report ./program
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Target specific kernel</span>
+</span></span><span style="display:flex;"><span>ncu --kernel-name NAME ./program
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># First launch only</span>
+</span></span><span style="display:flex;"><span>ncu --launch-count <span style="color:#ae81ff">1</span> ./program
+</span></span></code></pre></div><h3 id="key-metrics-interpretation">Key Metrics Interpretation</h3>
+<pre tabindex="0"><code>Memory Throughput:
+  &gt;80% → Memory-bound ✅ (for simple ops)
+  &lt;50% → Not memory-bound
+
+Compute Throughput:
+  &gt;80% → Compute-bound ✅ (for complex math)
+  &lt;20% → Compute idle
+
+Achieved Occupancy:
+  &gt;85% → Excellent ✅
+  &gt;75% → Very good ✅
+  &gt;50% → Good
+  &lt;50% → Needs improvement
+
+Registers Per Thread:
+  &lt;32 → Excellent ✅
+  &lt;64 → Good ✅
+  &lt;128 → Okay
+  &gt;128 → Likely problematic
+</code></pre><h3 id="bottleneck-quick-check">Bottleneck Quick Check</h3>
+<pre tabindex="0"><code>IF Memory Thru &gt;80% AND Compute Thru &lt;20%:
+  → MEMORY-BOUND
+  → Optimize: Access patterns, coalescing, cache
+  
+ELSE IF Compute Thru &gt;80% AND Memory Thru &lt;50%:
+  → COMPUTE-BOUND
+  → Optimize: Algorithm, fast math, Tensor Cores
+  
+ELSE IF Both &lt;50% AND Occupancy &lt;50%:
+  → OCCUPANCY-BOUND
+  → Optimize: Resources, block size, more blocks
+  
+ELSE:
+  → BALANCED or LATENCY-BOUND
+  → Check: Synchronization, divergence, small workload
+</code></pre><hr>
+<h2 id="conclusion">Conclusion</h2>
+<p>NVIDIA Nsight Compute is incredibly powerful, but the output can be overwhelming. The key is knowing <strong>which metrics matter</strong> and <strong>how to interpret them</strong>.</p>
+<h3 id="remember-the-fundamentals">Remember the Fundamentals:</h3>
+<ol>
+<li><strong>Start with Speed of Light</strong> - Tells you the big picture</li>
+<li><strong>Memory vs Compute throughput</strong> - Identifies the bottleneck</li>
+<li><strong>Occupancy matters</strong> - But don&rsquo;t chase 100%</li>
+<li><strong>Context is everything</strong> - &ldquo;Good&rdquo; depends on workload type</li>
+</ol>
+<h3 id="the-optimization-loop">The Optimization Loop:</h3>
+<pre tabindex="0"><code>Profile → Identify Bottleneck → Optimize → Re-Profile → Compare
+
+Repeat until:
+  • Performance goal achieved, OR
+  • Metrics show optimal utilization for workload type
+</code></pre><h3 id="when-to-stop-optimizing">When to Stop Optimizing:</h3>
+<p>You&rsquo;ve reached the limit when:</p>
+<ul>
+<li>✅ Bottleneck metric &gt;90% (memory or compute)</li>
+<li>✅ Occupancy &gt;75%</li>
+<li>✅ Access patterns are optimal</li>
+<li>✅ Profiler shows no obvious issues</li>
+</ul>
+<p>At this point, further improvement requires algorithmic changes, not just code tweaks.</p>
+<hr>
+<h2 id="further-resources">Further Resources</h2>
+<p><strong>Official Documentation:</strong></p>
+<ul>
+<li><a href="https://docs.nvidia.com/nsight-compute/">Nsight Compute Documentation</a></li>
+<li><a href="https://docs.nvidia.com/cuda/cuda-c-best-practices-guide/">CUDA C Best Practices Guide</a></li>
+<li><a href="https://docs.nvidia.com/cuda/profiler-users-guide/">Profiler User&rsquo;s Guide</a></li>
+</ul>
+<p><strong>Interactive Learning:</strong></p>
+<ul>
+<li>NVIDIA&rsquo;s Nsight Compute training videos</li>
+<li>CUDA profiling webinars</li>
+<li>GTC talks on performance optimization</li>
+</ul>
+<p><strong>Community:</strong></p>
+<ul>
+<li>NVIDIA Developer Forums</li>
+<li>Stack Overflow (#cuda, #nvidia-nsight)</li>
+<li>GPU computing Discord/Slack communities</li>
+</ul>
+<hr>
+<p><strong>Happy Profiling!</strong> 🚀</p>
+<p>Now you have the knowledge to understand what your GPU is really doing. Use ncu to guide your optimization efforts, and remember: <strong>measure, don&rsquo;t guess!</strong></p>
+<hr>
+<p><em>Written with ❤️ for the CUDA community</em><br>
+<em>Last updated: 2024</em><br>
+<em>Target: CUDA 12.0+, Compute Capability 7.0+</em></p>
+
+        </section>
+        <div class="post-tags">
+          
+          
+          
+        </div>
+      </div>
+
+      
+      
+    </div>
+
+    </article>
+</main>
+<footer>
+  <div style="display:flex"></div>
+  <div class="footer-info">
+    2025  <a
+      href="https://github.com/athul/archie">Archie Theme</a> | Built with <a href="https://gohugo.io">Hugo</a>
+  </div>
+</footer>
+
+</div>
+    </body>
+</html>
