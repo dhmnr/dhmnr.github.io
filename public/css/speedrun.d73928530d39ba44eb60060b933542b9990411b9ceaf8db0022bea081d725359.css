@@ -1,0 +1,38 @@
+.speedrun-definition {
+    background: #0a0a0a;
+    color: #ffffff;
+    padding: 3rem 2rem;
+    margin: 2rem 0;
+    border-radius: 8px;
+    font-family: Georgia, 'Times New Roman', serif;
+}
+
+.speedrun-title {
+    font-size: 2rem;
+    font-weight: 400;
+    margin-bottom: 1.5rem;
+    letter-spacing: 0.02em;
+}
+
+.pronunciation {
+    color: #888;
+    font-size: 0.9em;
+}
+
+.speedrun-title em {
+    font-style: italic;
+    color: #aaa;
+}
+
+.definition-text {
+    font-size: 1.2rem;
+    line-height: 1.7;
+    margin: 1rem 0;
+}
+
+.usage-example {
+    font-style: italic;
+    color: #999;
+    margin-top: 1.5rem;
+    font-size: 1.1rem;
+}
