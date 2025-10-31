@@ -1,6 +1,6 @@
 +++
 date = '2025-10-30T19:47:38-07:00'
-draft = true
+draft = false
 title = 'Tenets of Human-Like AGI'
 +++
 This post attempts to define what human-like AGI might look like. These tenets are rooted in emulating biological intelligence and overcoming its drawbacks.
