@@ -2,45 +2,52 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>dhmnr.sh</title>
-    <link>https://dhmnr.sh/</link>
+    <link>http://localhost:1313/</link>
     <description>Recent content on dhmnr.sh</description>
     <generator>Hugo</generator>
     <language>en-us</language>
-    <lastBuildDate>Mon, 27 Oct 2025 00:20:27 -0700</lastBuildDate>
-    <atom:link href="https://dhmnr.sh/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Thu, 30 Oct 2025 19:47:38 -0700</lastBuildDate>
+    <atom:link href="http://localhost:1313/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Tenets of Human-Like AGI</title>
+      <link>http://localhost:1313/posts/tenets-of-agi/</link>
+      <pubDate>Thu, 30 Oct 2025 19:47:38 -0700</pubDate>
+      <guid>http://localhost:1313/posts/tenets-of-agi/</guid>
+      <description>&lt;p&gt;This post attempts to define what human-like AGI might look like. These tenets are rooted in emulating biological intelligence and overcoming its drawbacks.&lt;/p&gt;&#xA;&lt;h2 id=&#34;working-definition-of-agi&#34;&gt;Working definition of AGI&lt;/h2&gt;&#xA;&lt;p&gt;AGI is a system that achieves human-level general intelligence, performing at or near human capability across a broad range of domains. The defining feature is generality rather than superhuman performance in any particular area. This is different from Narrow AI, which is superhuman at specific tasks but subhuman at generalization, and from ASI, which is far beyond human capability across all domains.&lt;/p&gt;</description>
+    </item>
     <item>
       <title>Speedrunning GPU Profiling with Nsight Compute CLI</title>
-      <link>https://dhmnr.sh/posts/speedrunning-ncu/</link>
+      <link>http://localhost:1313/posts/speedrunning-ncu/</link>
       <pubDate>Mon, 27 Oct 2025 00:20:27 -0700</pubDate>
-      <guid>https://dhmnr.sh/posts/speedrunning-ncu/</guid>
+      <guid>http://localhost:1313/posts/speedrunning-ncu/</guid>
       <description>&lt;div class=&#34;speedrun-definition&#34;&gt;&#xD;&#xA;    &lt;h2 class=&#34;speedrun-title&#34;&gt;speed·running &lt;span class=&#34;pronunciation&#34;&gt;/ˈspēdˌrəniNG/&lt;/span&gt; &lt;em&gt;v.&lt;/em&gt;&lt;/h2&gt;&#xD;&#xA;    &lt;p class=&#34;definition-text&#34;&gt;&#xD;&#xA;        &lt;strong&gt;1.&lt;/strong&gt; To complete (a video game, or part of a game) as fast as possible. Speedrunning often&#xD;&#xA;        involves following planned routes, which may incorporate sequence breaking and allow&#xD;&#xA;        sections to be skipped.&#xD;&#xA;    &lt;/p&gt;&#xD;&#xA;&lt;/div&gt;&#xA;&lt;p&gt;You&amp;rsquo;ve written your first CUDA kernel. You even implemented a basic reduction. It runs. But is it fast? Is it optimized? Where are the bottlenecks? How do you even answer these question?&lt;/p&gt;&#xA;&lt;br&gt;&#xD;&#xA;&lt;p&gt;The Answer is Profiling.&lt;/p&gt;</description>
     </item>
     <item>
       <title>A Higher Level Intelligence</title>
-      <link>https://dhmnr.sh/posts/a-higher-level-intelligence/</link>
+      <link>http://localhost:1313/posts/a-higher-level-intelligence/</link>
       <pubDate>Tue, 21 Oct 2025 19:12:20 -0700</pubDate>
-      <guid>https://dhmnr.sh/posts/a-higher-level-intelligence/</guid>
+      <guid>http://localhost:1313/posts/a-higher-level-intelligence/</guid>
       <description>&lt;h2 id=&#34;i-the-core-hypothesis&#34;&gt;I. The Core Hypothesis&lt;/h2&gt;&#xA;&lt;p&gt;Current paradigm:&lt;/p&gt;&#xA;&lt;p&gt;Reasoning = manipulating discrete symbolic tokens (words)&#xA;Intelligence = learning patterns in token sequences&#xA;Architecture: Attention over discrete tokens&lt;/p&gt;&#xA;&lt;p&gt;Our hypothesis:&lt;/p&gt;&#xA;&lt;p&gt;Reasoning occurs in a continuous pre-linguistic substrate&#xA;Language is a lossy discretization of this substrate for communication&#xA;Current AI learns from the discretization, never accessing the underlying continuous process&#xA;This is why they can be fluent but not truly reason&lt;/p&gt;&#xA;&lt;p&gt;Mathematical statement:&#xA;There exists a continuous cognitive process $\Psi(x, \alpha, t)$ where:&lt;/p&gt;</description>
     </item>
     <item>
       <title>Serving LLMs at Scale: FlashAttention</title>
-      <link>https://dhmnr.sh/posts/serving-llms-at-scale-flashattention/</link>
+      <link>http://localhost:1313/posts/serving-llms-at-scale-flashattention/</link>
       <pubDate>Fri, 17 Oct 2025 23:46:20 -0700</pubDate>
-      <guid>https://dhmnr.sh/posts/serving-llms-at-scale-flashattention/</guid>
+      <guid>http://localhost:1313/posts/serving-llms-at-scale-flashattention/</guid>
       <description>&lt;p&gt;Attention is the bottleneck in transformer inference, but not for the reasons you might think.&#xA;A100 sits at 30% utilization during attention not because the math is hard, but because&#xA;it&amp;rsquo;s spending most of its time waiting for data to move between memory and compute cores.&#xA;FlashAttention fixes this by keeping computation in fast on-chip SRAM and never materializing&#xA;the O(N²) attention matrix. Here&amp;rsquo;s how it works.&lt;/p&gt;</description>
     </item>
     <item>
       <title>About</title>
-      <link>https://dhmnr.sh/about/</link>
+      <link>http://localhost:1313/about/</link>
       <pubDate>Thu, 16 Oct 2025 12:46:53 -0700</pubDate>
-      <guid>https://dhmnr.sh/about/</guid>
+      <guid>http://localhost:1313/about/</guid>
       <description>&lt;p&gt;I write about whatever I&amp;rsquo;m curious about.&#xA;This blog has no theme. Just thoughts, projects, and explorations.&lt;/p&gt;&#xA;&lt;h2 id=&#34;contact&#34;&gt;Contact&lt;/h2&gt;&#xA;&lt;p&gt;&lt;a href=&#34;https://github.com/dhmnr&#34;&gt;GitHub&lt;/a&gt; • &lt;a href=&#34;mailto:mail@dhmnr.sh&#34;&gt;Email&lt;/a&gt;&lt;/p&gt;</description>
     </item>
     <item>
       <title>An Empty Post</title>
-      <link>https://dhmnr.sh/posts/an-empty-post/</link>
+      <link>http://localhost:1313/posts/an-empty-post/</link>
       <pubDate>Wed, 15 Oct 2025 21:44:23 -0700</pubDate>
-      <guid>https://dhmnr.sh/posts/an-empty-post/</guid>
+      <guid>http://localhost:1313/posts/an-empty-post/</guid>
       <description></description>
     </item>
   </channel>
