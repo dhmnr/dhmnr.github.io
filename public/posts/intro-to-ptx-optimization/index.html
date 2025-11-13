@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html><head lang="en"><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
+	<meta charset="utf-8" />
+	<meta http-equiv="X-UA-Compatible" content="IE=edge"><title>Intro to PTX Optimization : Part 1 - dhmnr.sh</title><meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="description" content="If you&rsquo;re trying to push your GPU harder than CUDA C&#43;&#43; allows, eventually you end up at PTX. It&rsquo;s NVIDIA&rsquo;s intermediate representation, sitting between your kernel code and the hardware.
+This post covers PTX from the ground up: what it is, how to write it by hand, and why it matters. Make sure you&rsquo;re comfortable with CUDA kernels and the memory model before jumping in.
+
+What is PTX?
+PTX is a low-level, virtual instruction set designed by NVIDIA for their GPUs. It&rsquo;s basically the GPU&rsquo;s &ldquo;assembly language,&rdquo; but it&rsquo;s not the final machine code. Instead, PTX gets compiled just-in-time (JIT) by the NVIDIA driver into SASS, the actual binary that runs on your specific GPU architecture." />
+	<meta property="og:image" content=""/>
+	<meta property="og:url" content="http://localhost:1313/posts/intro-to-ptx-optimization/">
+  <meta property="og:site_name" content="dhmnr.sh">
+  <meta property="og:title" content="Intro to PTX Optimization : Part 1">
+  <meta property="og:description" content="If you’re trying to push your GPU harder than CUDA C&#43;&#43; allows, eventually you end up at PTX. It’s NVIDIA’s intermediate representation, sitting between your kernel code and the hardware. This post covers PTX from the ground up: what it is, how to write it by hand, and why it matters. Make sure you’re comfortable with CUDA kernels and the memory model before jumping in.
+What is PTX? PTX is a low-level, virtual instruction set designed by NVIDIA for their GPUs. It’s basically the GPU’s “assembly language,” but it’s not the final machine code. Instead, PTX gets compiled just-in-time (JIT) by the NVIDIA driver into SASS, the actual binary that runs on your specific GPU architecture.">
+  <meta property="og:locale" content="en_us">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2025-11-12T01:09:00-08:00">
+    <meta property="article:modified_time" content="2025-11-12T01:09:00-08:00">
+
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Intro to PTX Optimization : Part 1">
+  <meta name="twitter:description" content="If you’re trying to push your GPU harder than CUDA C&#43;&#43; allows, eventually you end up at PTX. It’s NVIDIA’s intermediate representation, sitting between your kernel code and the hardware. This post covers PTX from the ground up: what it is, how to write it by hand, and why it matters. Make sure you’re comfortable with CUDA kernels and the memory model before jumping in.
+What is PTX? PTX is a low-level, virtual instruction set designed by NVIDIA for their GPUs. It’s basically the GPU’s “assembly language,” but it’s not the final machine code. Instead, PTX gets compiled just-in-time (JIT) by the NVIDIA driver into SASS, the actual binary that runs on your specific GPU architecture.">
+
+        <link href="http://localhost:1313/css/fonts.11a1877508139eac0b5b4852ceb110c35641b3533321e66e39149e901ed5756b.css" rel="stylesheet">
+	
+
+	
+	<link rel="stylesheet" type="text/css" media="screen" href="http://localhost:1313/css/main.2d8b5d025466bd6ddaba53abadd82452f7b979866a58623830289b480f93bb3b.css" />
+		<link id="darkModeStyle" rel="stylesheet" type="text/css" href="http://localhost:1313/css/dark.3cc53e265be0aadc134ff08f276085599313959408ee8c32d9cf35ce71670fff.css"  disabled /><link rel="stylesheet" href="http://localhost:1313/katex/katex.min.css ">
+		<script defer src="http://localhost:1313/katex/katex.min.js"></script>
+		<script defer src="http://localhost:1313/katex/auto-render.min.js" onload="renderMathInElement(document.body);"></script>
+		
+		<script>
+			document.addEventListener("DOMContentLoaded", function() {
+					renderMathInElement(document.body, {
+							delimiters: [
+									{left: "$$", right: "$$", display: true},
+									{left: "$", right: "$", display: false}
+							]
+					});
+			});
+		</script>
+		
+		
+		<link rel="stylesheet" type="text/css" href="http://localhost:1313/css/jetbrains-mono.027bd4d70293c64700e7ad92bd136797198199ca99c9ea54541f4b41805e9006.css">
+		
+		
+		<link rel="stylesheet" type="text/css" href="http://localhost:1313/css/speedrun.ff7cd40ab2a8b7b70c253c14e084f61b5d4ce5c3190ea3b5c440e26f0fa3a52d.css">
+		
+</head>
+<body>
+        <div class="content"><header>
+	<div class="main">
+		<a href="http://localhost:1313/">dhmnr.sh</a>
+	</div>
+	<nav>
+		
+		<a href="/">home</a>
+		
+		<a href="/posts">posts</a>
+		
+		<a href="/about">about</a>
+		
+		<a href="/tags">tags</a>
+		
+		<button id="dark-mode-toggle" class="nav-toggle" onclick="toggleTheme()" aria-label="Toggle dark mode" type="button"><svg class="feather" viewBox="0 0 24 24" fill="none" stroke="#232333" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg></button>
+		<script src="http://localhost:1313/js/themetoggle.js"></script>
+		
+	</nav>
+</header>
+
+<main>
+  <article>
+    <div class="post-container">
+      
+      <div class="post-content">
+        <div class="title">
+          <h1 class="title">Intro to PTX Optimization : Part 1</h1>
+          <div class="meta">Posted on Nov 12, 2025 <span class="draft-label">DRAFT</span> </div>
+        </div>
+        
+        <section class="body">
+          <p>If you&rsquo;re trying to push your GPU harder than CUDA C++ allows, eventually you end up at PTX. It&rsquo;s NVIDIA&rsquo;s intermediate representation, sitting between your kernel code and the hardware.
+This post covers PTX from the ground up: what it is, how to write it by hand, and why it matters. Make sure you&rsquo;re comfortable with CUDA kernels and the memory model before jumping in.</p>
+<hr>
+<h2 id="what-is-ptx">What is PTX?</h2>
+<p>PTX is a low-level, virtual instruction set designed by NVIDIA for their GPUs. It&rsquo;s basically the GPU&rsquo;s &ldquo;assembly language,&rdquo; but it&rsquo;s not the final machine code. Instead, PTX gets compiled just-in-time (JIT) by the NVIDIA driver into SASS, the actual binary that runs on your specific GPU architecture.</p>
+<p>Why the extra step? Why not compile directly to SASS?</p>
+<ul>
+<li>PTX written today can run on future GPUs without recompiling. Ship it once and let the driver handle new architectures as they come out.</li>
+<li>Different GPUs have different instruction sets, register counts, and quirks. PTX lets you write once and trust the driver to optimize for whatever hardware it lands on, whether that&rsquo;s Ampere, Hopper, or Blackwell.</li>
+<li>You can inspect PTX output and see exactly what the compiler turned your kernel into. When you&rsquo;re hunting for performance, this visibility is invaluable.</li>
+</ul>
+<hr>
+<h2 id="why-should-you-care-about-ptx">Why should you care about PTX?</h2>
+<p>You might never need to write PTX by hand. But understanding it pays off.</p>
+<ol>
+<li>You can spot and fix inefficiencies that high-level CUDA hides from you. Redundant loads, suboptimal register usage, missed optimizations. You know your workload better than the compiler does.</li>
+<li>You&rsquo;ll actually understand what your code becomes. Not abstractly, but instruction by instruction.</li>
+</ol>
+<hr>
+<h2 id="ptx-basics">PTX Basics</h2>
+<p>If you know CUDA, the execution model is the same: threads, warps, blocks, grids. What&rsquo;s new is how you access it all in PTX.</p>
+<h3 id="thread-identity">Thread Identity</h3>
+<p>In CUDA you use <code>threadIdx.x</code>, <code>blockIdx.x</code>, and so on. In PTX, these are special registers:</p>
+<pre tabindex="0"><code class="language-ptx" data-lang="ptx">%tid.x, %tid.y, %tid.z       // thread index within block (threadIdx)
+%ntid.x, %ntid.y, %ntid.z    // block dimensions (blockDim)
+%ctaid.x, %ctaid.y, %ctaid.z // block index within grid (blockIdx)
+%nctaid.x, %nctaid.y, %nctaid.z // grid dimensions (gridDim)
+</code></pre><p>These are read-only and always available. No declaration needed.</p>
+<h3 id="instruction-anatomy">Instruction Anatomy</h3>
+<p>Before we go further, let&rsquo;s look at how PTX instructions are structured. Every instruction follows a pattern:</p>
+<pre tabindex="0"><code>opcode.modifier.type  destination, source1, source2, ...
+</code></pre><p>For example:</p>
+<pre tabindex="0"><code class="language-ptx" data-lang="ptx">add.f32  %f3, %f1, %f2;    // f3 = f1 + f2 (32-bit float)
+mul.lo.s32  %r3, %r1, %r2; // r3 = low 32 bits of r1 * r2 (signed)
+</code></pre><p>The opcode (<code>add</code>, <code>mul</code>, <code>ld</code>, <code>st</code>, etc.) tells you what operation. The modifiers refine it: <code>.lo</code> means &ldquo;keep the low bits,&rdquo; <code>.f32</code> or <code>.s32</code> is the type. Destination comes first, then sources.</p>
+<p>Some instructions have more modifiers. Loads and stores specify memory space and size:</p>
+<pre tabindex="0"><code class="language-ptx" data-lang="ptx">ld.global.f32  %f1, [%rd1];   // load 32-bit float from global memory
+</code></pre><p>Here <code>ld</code> is the opcode, <code>.global</code> is the memory space, <code>.f32</code> is the type, <code>%f1</code> is the destination, and <code>[%rd1]</code> is the address to load from. The brackets mean &ldquo;memory at this address,&rdquo; similar to pointer dereferencing.</p>
+<p>Once you see the pattern, PTX becomes pretty readable. It&rsquo;s verbose compared to x86, but that verbosity makes everything explicit.</p>
+<h3 id="memory-spaces">Memory Spaces</h3>
+<p>PTX makes memory spaces explicit in every load and store. No ambiguity about where your data lives.</p>
+<table>
+  <thead>
+      <tr>
+          <th>Space</th>
+          <th>Prefix</th>
+          <th>Scope</th>
+          <th>Typical Use</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>Global</td>
+          <td><code>.global</code></td>
+          <td>All threads</td>
+          <td>Main data arrays</td>
+      </tr>
+      <tr>
+          <td>Shared</td>
+          <td><code>.shared</code></td>
+          <td>Per-block</td>
+          <td>Inter-thread communication</td>
+      </tr>
+      <tr>
+          <td>Local</td>
+          <td><code>.local</code></td>
+          <td>Per-thread</td>
+          <td>Spilled registers, private arrays</td>
+      </tr>
+      <tr>
+          <td>Constant</td>
+          <td><code>.const</code></td>
+          <td>All threads (cached)</td>
+          <td>Read-only parameters</td>
+      </tr>
+      <tr>
+          <td>Texture</td>
+          <td><code>.tex</code></td>
+          <td>All threads (cached)</td>
+          <td>Spatially coherent reads</td>
+      </tr>
+  </tbody>
+</table>
+<p>So <code>ld.global.f32</code> loads a float from global memory, <code>st.shared.f32</code> stores to shared, and so on. The pattern is always <code>opcode.space.type</code>.</p>
+<p>You&rsquo;ll see <code>.local</code> in compiler output when register pressure is high, but you rarely write to it directly.</p>
+<h3 id="registers">Registers</h3>
+<p>You declare registers upfront with a type and a count:</p>
+<pre tabindex="0"><code class="language-ptx" data-lang="ptx">.reg .b32 %r&lt;10&gt;;     // 10 x 32-bit untyped (bitwise ops)
+.reg .u32 %ru&lt;5&gt;;     // 5 x 32-bit unsigned
+.reg .s32 %rs&lt;5&gt;;     // 5 x 32-bit signed
+.reg .f32 %f&lt;8&gt;;      // 8 x 32-bit float
+.reg .f64 %fd&lt;4&gt;;     // 4 x 64-bit double
+.reg .pred %p&lt;3&gt;;     // 3 x predicate (for conditionals)
+</code></pre><p>The <code>&lt;N&gt;</code> syntax gives you registers numbered 0 to N-1. So <code>.reg .f32 %f&lt;8&gt;</code> declares <code>%f0</code> through <code>%f7</code>.</p>
+<p>Predicates are worth calling out. PTX doesn&rsquo;t have traditional branching in the way you might expect. Instead, you set a predicate register and use it to guard instructions:</p>
+<pre tabindex="0"><code class="language-ptx" data-lang="ptx">setp.lt.f32 %p0, %f1, %f2;    // set %p0 if %f1 &lt; %f2
+@%p0 add.f32 %f3, %f1, %f2;   // only execute if %p0 is true
+</code></pre><p>This is how SIMT handles divergence without full branching.</p>
+<hr>
+<h2 id="your-first-ptx-kernel">Your First PTX Kernel</h2>
+<p>Let&rsquo;s write the classic: vector addition. Here&rsquo;s the CUDA version:</p>
+<pre tabindex="0"><code class="language-cuda" data-lang="cuda">__global__ void vecAdd(float *A, float *B, float *C, int n) {
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i &lt; n) {
+        C[i] = A[i] + B[i];
+    }
+}
+</code></pre><p>Every PTX file starts with some metadata: the ISA version (<code>.version 8.0</code>), target architecture (<code>.target sm_80</code>), and address size (<code>.address_size 64</code>). Then you declare the kernel with <code>.visible .entry</code>, which marks it as a kernel entry point callable from host code. Device-only functions use <code>.func</code> instead.</p>
+<p>Here&rsquo;s the PTX equivalent:</p>
+<pre tabindex="0"><code class="language-ptx" data-lang="ptx">.version 8.0
+.target sm_80
+.address_size 64
+
+.visible .entry vecAdd(
+    .param .u64 param_A,
+    .param .u64 param_B,
+    .param .u64 param_C,
+    .param .u32 param_n
+)
+{
+    // Declare registers
+    .reg .u64 %rd&lt;8&gt;;       // 64-bit for pointers
+    .reg .u32 %r&lt;4&gt;;        // 32-bit for indices
+    .reg .f32 %f&lt;3&gt;;        // 32-bit floats for data
+    .reg .pred %p0;         // Predicate for bounds check
+
+    // Load parameters
+    ld.param.u64 %rd0, [param_A];
+    ld.param.u64 %rd1, [param_B];
+    ld.param.u64 %rd2, [param_C];
+    ld.param.u32 %r0, [param_n];
+
+    // Calculate global thread index: i = blockIdx.x * blockDim.x + threadIdx.x
+    mov.u32 %r1, %ctaid.x;
+    mov.u32 %r2, %ntid.x;
+    mov.u32 %r3, %tid.x;
+    mad.lo.u32 %r1, %r1, %r2, %r3;    // %r1 = i
+
+    // Bounds check: if (i &gt;= n) return
+    setp.ge.u32 %p0, %r1, %r0;
+    @%p0 bra EXIT;
+
+    // Calculate byte offsets (float = 4 bytes)
+    mul.wide.u32 %rd3, %r1, 4;        // byte offset = i * 4
+    add.u64 %rd4, %rd0, %rd3;         // &amp;A[i]
+    add.u64 %rd5, %rd1, %rd3;         // &amp;B[i]
+    add.u64 %rd6, %rd2, %rd3;         // &amp;C[i]
+
+    // Load A[i] and B[i]
+    ld.global.f32 %f0, [%rd4];
+    ld.global.f32 %f1, [%rd5];
+
+    // C[i] = A[i] + B[i]
+    add.f32 %f2, %f0, %f1;
+
+    // Store result
+    st.global.f32 [%rd6], %f2;
+
+EXIT:
+    ret;
+}
+</code></pre><p>The structure maps pretty directly to CUDA. Parameters come in through <code>.param</code> space, you calculate your thread index the same way, bounds check with a predicate, and do your loads/stores. More verbose, but nothing conceptually new if you followed the basics.</p>
+<p>A few things worth noting in this example:</p>
+<p><code>mad.lo.u32</code> is multiply-add, keeping the low 32 bits. This is your <code>blockIdx.x * blockDim.x + threadIdx.x</code> in one instruction.</p>
+<p><code>mul.wide.u32</code> multiplies a 32-bit value and produces a 64-bit result. We need this because our pointers are 64-bit but our index is 32-bit.</p>
+<p>The bounds check uses a predicate (<code>%p0</code>) and a predicated branch (<code>@%p0 bra EXIT</code>). If the thread is out of bounds, it jumps straight to the return.</p>
+<h2 id="compiling-and-running-ptx">Compiling and Running PTX</h2>
+<p>You have a few options depending on what you&rsquo;re trying to do.</p>
+<h3 id="inline-ptx-assembly">Inline PTX Assembly</h3>
+<p>For targeted optimizations, you can embed PTX directly in CUDA code:</p>
+<pre tabindex="0"><code class="language-cuda" data-lang="cuda">int result;
+asm(&#34;add.s32 %0, %1, %2;&#34; : &#34;=r&#34;(result) : &#34;r&#34;(a), &#34;r&#34;(b));
+</code></pre><p>The syntax follows GCC&rsquo;s extended asm format:</p>
+<pre tabindex="0"><code>asm(&#34;instruction&#34; : outputs : inputs);
+</code></pre><p>The <code>%0</code>, <code>%1</code>, <code>%2</code> are placeholders that map to the operands in order. Constraints tell the compiler what kind of register each variable needs:</p>
+<table>
+  <thead>
+      <tr>
+          <th>Constraint</th>
+          <th>Meaning</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>&quot;r&quot;</code></td>
+          <td>32-bit register</td>
+      </tr>
+      <tr>
+          <td><code>&quot;l&quot;</code></td>
+          <td>64-bit register</td>
+      </tr>
+      <tr>
+          <td><code>&quot;f&quot;</code></td>
+          <td>32-bit float register</td>
+      </tr>
+      <tr>
+          <td><code>&quot;d&quot;</code></td>
+          <td>64-bit float register</td>
+      </tr>
+      <tr>
+          <td><code>&quot;=&quot;</code></td>
+          <td>Output operand (write-only)</td>
+      </tr>
+      <tr>
+          <td><code>&quot;+&quot;</code></td>
+          <td>Output operand (read-write)</td>
+      </tr>
+  </tbody>
+</table>
+<p>A float example:</p>
+<pre tabindex="0"><code class="language-cuda" data-lang="cuda">float x, y, result;
+asm(&#34;mul.f32 %0, %1, %2;&#34; : &#34;=f&#34;(result) : &#34;f&#34;(x), &#34;f&#34;(y));
+</code></pre><p>Use <code>asm volatile(...)</code> when the instruction has side effects the compiler shouldn&rsquo;t optimize away, like memory operations or barriers:</p>
+<pre tabindex="0"><code class="language-cuda" data-lang="cuda">asm volatile(&#34;bar.sync 0;&#34;);
+asm volatile(&#34;cp.async.wait_group 0;&#34;);
+</code></pre><p>This is the most practical approach for most PTX work. You keep your CUDA code, your build system, your debugging tools, and just drop to PTX for the specific instructions that matter.</p>
+<p>Good for: specific instructions the compiler won&rsquo;t emit, async copy control, warp-level primitives, cache hints.</p>
+<h3 id="load-ptx-at-runtime">Load PTX at Runtime</h3>
+<p>The CUDA Driver API can compile and load PTX on the fly:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span>CUmodule module;
+</span></span><span style="display:flex;"><span>CUfunction kernel;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">cuModuleLoadData</span>(<span style="color:#f92672">&amp;</span>module, ptx_source);  <span style="color:#75715e">// ptx_source is a string
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">cuModuleGetFunction</span>(<span style="color:#f92672">&amp;</span>kernel, module, <span style="color:#e6db74">&#34;vecAdd&#34;</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">void</span> <span style="color:#f92672">*</span>args[] <span style="color:#f92672">=</span> { <span style="color:#f92672">&amp;</span>d_A, <span style="color:#f92672">&amp;</span>d_B, <span style="color:#f92672">&amp;</span>d_C, <span style="color:#f92672">&amp;</span>n };
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">cuLaunchKernel</span>(kernel, gridDim, <span style="color:#ae81ff">1</span>, <span style="color:#ae81ff">1</span>, blockDim, <span style="color:#ae81ff">1</span>, <span style="color:#ae81ff">1</span>, <span style="color:#ae81ff">0</span>, <span style="color:#ae81ff">0</span>, args, <span style="color:#ae81ff">0</span>);
+</span></span></code></pre></div><p>The PTX gets JIT compiled to SASS for whatever GPU is present. This is how most production systems that ship PTX actually work.</p>
+<p>Good for: JIT compilation, runtime code generation, shipping PTX that adapts to the user&rsquo;s GPU architecture.</p>
+<h3 id="compile-to-cubin-ahead-of-time">Compile to Cubin Ahead of Time</h3>
+<p>If you want a binary for a specific architecture:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>ptxas -arch<span style="color:#f92672">=</span>sm_80 -o kernel.cubin kernel.ptx
+</span></span></code></pre></div><p>Then load it with <code>cuModuleLoad</code> instead of <code>cuModuleLoadData</code>. You can also use <code>ptxas</code> to check what SASS your PTX compiles to:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>ptxas -arch<span style="color:#f92672">=</span>sm_80 --warn-on-spills kernel.ptx
+</span></span><span style="display:flex;"><span>cuobjdump -sass kernel.cubin
+</span></span></code></pre></div><p>Good for: benchmarking, inspecting SASS output, distributing precompiled kernels, avoiding JIT overhead at launch.</p>
+<h3 id="which-one-to-use">Which one to use?</h3>
+<p>For most optimization work: <strong>inline asm</strong>. You&rsquo;re probably not rewriting entire kernels in PTX. You&rsquo;re dropping in specific instructions for async copies, warp shuffles, or cache hints. Inline asm lets you do that without leaving CUDA.</p>
+<p>For runtime flexibility: <strong>driver API with PTX strings</strong>. Useful when you&rsquo;re generating kernels dynamically or need to support multiple architectures from one binary.</p>
+<p>For debugging codegen: <strong>ptxas + cuobjdump</strong>. When you want to see exactly what SASS your PTX becomes.</p>
+<hr>
+<h2 id="when-to-drop-to-ptx">When to Drop to PTX</h2>
+<p>vecAdd was a teaching example. You&rsquo;d never actually write it in PTX by hand, the compiler does fine.</p>
+<p>So when does PTX actually matter?</p>
+<p>The answer is almost always: <strong>when you need control over something the compiler won&rsquo;t give you.</strong> Specific instruction selection, memory operation scheduling, or hardware features that CUDA doesn&rsquo;t expose cleanly.</p>
+<p>The most common case on modern GPUs: <strong>async memory operations</strong>. Ampere and newer architectures have dedicated hardware for overlapping memory transfers with computation. CUDA exposes some of this through <code>cuda::memcpy_async</code> and <code>cuda::pipeline</code>, but the compiler is conservative. It won&rsquo;t always schedule things the way you want.</p>
+<p>PTX gives you explicit control.</p>
+<hr>
+<h2 id="software-pipelining-with-async-copies">Software Pipelining with Async Copies</h2>
+<p>Here&rsquo;s a real optimization pattern. Consider a kernel processing chunks of data:</p>
+<pre tabindex="0"><code class="language-cuda" data-lang="cuda">__global__ void process(float *input, float *output, int n) {
+    __shared__ float tile[256];
+    
+    for (int i = 0; i &lt; n; i += 256) {
+        // Load phase
+        tile[threadIdx.x] = input[i + threadIdx.x];
+        __syncthreads();
+        
+        // Compute phase
+        float result = expensive_compute(tile[threadIdx.x]);
+        output[i + threadIdx.x] = result;
+        __syncthreads();
+    }
+}
+</code></pre><p>The problem is the timeline. Compute units sit idle waiting for memory:</p>
+<pre tabindex="0"><code>Iteration 0:  [===LOAD===][===COMPUTE===]
+Iteration 1:                             [===LOAD===][===COMPUTE===]
+Iteration 2:                                                        [===LOAD===]...
+</code></pre><p>Every iteration pays the full memory latency before compute can start.</p>
+<p>The fix is software pipelining: start loading the <em>next</em> tile while computing on the <em>current</em> one. You need two buffers (double buffering) and explicit control over when loads start and when you wait for them.</p>
+<p>PTX provides the <code>cp.async</code> family of instructions for this:</p>
+<pre tabindex="0"><code class="language-cuda" data-lang="cuda">__global__ void process_pipelined(float *input, float *output, int n) {
+    __shared__ float tile[2][256];  // Double buffer
+    int buf = 0;
+    
+    // Prime the pipeline: start loading first tile
+    asm volatile(
+        &#34;cp.async.cg.shared.global [%0], [%1], 4;\n&#34;
+        :: &#34;r&#34;(&amp;tile[buf][threadIdx.x]), 
+           &#34;l&#34;(&amp;input[threadIdx.x])
+    );
+    asm volatile(&#34;cp.async.commit_group;\n&#34;);
+    
+    for (int i = 0; i &lt; n; i += 256) {
+        int next_buf = buf ^ 1;
+        
+        // Start async load for NEXT iteration
+        if (i + 256 &lt; n) {
+            asm volatile(
+                &#34;cp.async.cg.shared.global [%0], [%1], 4;\n&#34;
+                :: &#34;r&#34;(&amp;tile[next_buf][threadIdx.x]), 
+                   &#34;l&#34;(&amp;input[i + 256 + threadIdx.x])
+            );
+            asm volatile(&#34;cp.async.commit_group;\n&#34;);
+        }
+        
+        // Wait for CURRENT tile to arrive
+        asm volatile(&#34;cp.async.wait_group 1;\n&#34;);
+        __syncthreads();
+        
+        // Compute on current tile while next tile loads
+        float result = expensive_compute(tile[buf][threadIdx.x]);
+        output[i + threadIdx.x] = result;
+        
+        buf = next_buf;
+    }
+    
+    // Drain the pipeline
+    asm volatile(&#34;cp.async.wait_group 0;\n&#34;);
+}
+</code></pre><p>Now the timeline overlaps:</p>
+<pre tabindex="0"><code>          [==LOAD 0==]
+                     [==LOAD 1==][==LOAD 2==][==LOAD 3==]
+                     [==COMP 0==][==COMP 1==][==COMP 2==][==COMP 3==]
+</code></pre><p>After the first load, memory latency is hidden. Compute never stalls waiting for data.</p>
+<h3 id="the-ptx-instructions">The PTX instructions</h3>
+<p><code>cp.async.cg.shared.global [dst], [src], size</code> copies <code>size</code> bytes from global to shared memory asynchronously. The <code>.cg</code> modifier means &ldquo;cache global&rdquo; (cache in L2 only). The copy happens in the background without blocking the thread.</p>
+<p><code>cp.async.commit_group</code> marks the current batch of async copies as a group. You can have multiple groups in flight.</p>
+<p><code>cp.async.wait_group N</code> blocks until at most N groups are still pending. So <code>wait_group 1</code> means &ldquo;wait until the oldest group is done, but let one group keep loading.&rdquo; <code>wait_group 0</code> drains everything.</p>
+<h3 id="why-not-just-use-cudamemcpy_async">Why not just use cuda::memcpy_async?</h3>
+<p>You can. CUDA 11+ exposes <code>cuda::memcpy_async</code> and <code>cuda::pipeline</code> which compile down to these same instructions. But:</p>
+<ol>
+<li>The compiler decides scheduling. It might not pipeline the way you want.</li>
+<li>The abstraction hides what&rsquo;s happening. When you&rsquo;re debugging performance, you want to see the actual instructions.</li>
+<li>PTX gives you precise control over group boundaries and wait points.</li>
+</ol>
+<p>For production code, try the CUDA abstractions first. Drop to PTX when the compiler isn&rsquo;t giving you what you need, or when you want to understand exactly what&rsquo;s happening.</p>
+<hr>
+<h2 id="further-reading">Further Reading</h2>
+<ul>
+<li><a href="https://docs.nvidia.com/cuda/parallel-thread-execution/">PTX ISA Reference</a> — The definitive 400+ page spec</li>
+<li><a href="https://docs.nvidia.com/cuda/cuda-binary-utilities/">CUDA Binary Utilities</a> — <code>cuobjdump</code>, <code>nvdisasm</code> for inspecting binaries</li>
+<li><a href="https://docs.nvidia.com/cuda/inline-ptx-assembly/">Inline PTX Assembly in CUDA</a></li>
+</ul>
+<hr>
+<h2 id="conclusion">Conclusion</h2>
+<p>PTX is a sharp tool, not a magic one. Dropping to PTX won&rsquo;t automatically make your code faster. Most of the time, the compiler does fine. When it doesn&rsquo;t, the problem is usually algorithmic or architectural, not instruction selection.
+But when you&rsquo;ve done everything else right and you need precise control over memory operations, instruction scheduling, or hardware features the compiler won&rsquo;t touch, PTX is there. It&rsquo;s not the first thing to reach for. It&rsquo;s the last.
+The value in learning it isn&rsquo;t that you&rsquo;ll write PTX every day. It&rsquo;s that you&rsquo;ll understand what your CUDA code becomes, why the compiler makes the choices it does, and where the real bottlenecks live. That understanding pays off even when you never write a single asm statement.</p>
+<hr>
+<p><em>Questions? Found an error? Let me know in the comments.</em></p>
+<!-- 
+## When to Actually Use PTX: Real Examples
+
+Knowing *what* PTX is doesn't tell you *when* to reach for it. Here are concrete scenarios where inline PTX or hand-written PTX kernels solve problems that CUDA C++ can't — or won't.
+
+### Example 1: Software Pipelining with Async Copies
+
+The most common reason to drop into PTX: **overlapping memory transfers with computation**. Modern GPUs (Ampere+) have dedicated hardware for async global-to-shared memory copies. CUDA provides `cuda::memcpy_async`, but the compiler is conservative about scheduling. Sometimes you need explicit control.
+
+Here's the problem. Consider a kernel processing chunks of data:
+
+```cuda
+// Naive CUDA: Load, compute, repeat
+__global__ void process(float *input, float *output, int n) {
+    __shared__ float tile[256];
+    
+    for (int i = 0; i < n; i += 256) {
+        // Load phase (memory latency here!)
+        tile[threadIdx.x] = input[i + threadIdx.x];
+        __syncthreads();
+        
+        // Compute phase (ALUs idle during load above)
+        float result = expensive_compute(tile[threadIdx.x]);
+        output[i + threadIdx.x] = result;
+        __syncthreads();
+    }
+}
+```
+
+The timeline looks like this — compute units sit idle waiting for memory:
+
+```
+Iteration 0:  [===LOAD===][===COMPUTE===]
+Iteration 1:                             [===LOAD===][===COMPUTE===]
+```
+
+**The PTX solution**: Use `cp.async` to overlap the *next* iteration's load with the *current* iteration's compute:
+
+```cuda
+__global__ void process_pipelined(float *input, float *output, int n) {
+    __shared__ float tile[2][256];  // Double buffer
+    int buf = 0;
+    
+    // Prime the pipeline: async load first tile
+    asm volatile(
+        "cp.async.cg.shared.global [%0], [%1], 4;\n"
+        :: "r"(&tile[buf][threadIdx.x]), 
+           "l"(&input[threadIdx.x])
+    );
+    asm volatile("cp.async.commit_group;\n");
+    
+    for (int i = 0; i < n; i += 256) {
+        int next_buf = buf ^ 1;
+        
+        // Start async load for NEXT iteration
+        if (i + 256 < n) {
+            asm volatile(
+                "cp.async.cg.shared.global [%0], [%1], 4;\n"
+                :: "r"(&tile[next_buf][threadIdx.x]), 
+                   "l"(&input[i + 256 + threadIdx.x])
+            );
+            asm volatile("cp.async.commit_group;\n");
+        }
+        
+        // Wait for CURRENT tile to arrive
+        asm volatile("cp.async.wait_group 1;\n");  // Wait until ≤1 group pending
+        __syncthreads();
+        
+        // Compute on current tile (while next tile loads!)
+        float result = expensive_compute(tile[buf][threadIdx.x]);
+        output[i + threadIdx.x] = result;
+        
+        buf = next_buf;
+    }
+    
+    // Drain pipeline
+    asm volatile("cp.async.wait_group 0;\n");
+}
+```
+
+Now the timeline overlaps:
+
+```
+          [==LOAD 0==]
+                     [==LOAD 1==][==LOAD 2==][==LOAD 3==]
+                     [==COMP 0==][==COMP 1==][==COMP 2==][==COMP 3==]
+```
+
+**Why PTX?** The `cp.async` family, `commit_group`, and `wait_group` give you explicit control over the async copy pipeline. The compiler *might* do this with `cuda::memcpy_async` and `cuda::pipeline`, but the PTX version lets you see exactly what's happening and tune the pipeline depth.
+
+### Example 2: Explicit Prefetching to L2
+
+Sometimes you know your access pattern better than the compiler. Global loads have ~400 cycle latency. If you can prefetch data 400 cycles before you need it, you hide that latency entirely.
+
+```cuda
+__global__ void compute_with_prefetch(float *data, float *output, int n) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    
+    // Prefetch data we'll need 4 iterations from now
+    if (idx + 4 * gridDim.x * blockDim.x < n) {
+        asm volatile(
+            "prefetch.global.L2 [%0];\n"
+            :: "l"(&data[idx + 4 * gridDim.x * blockDim.x])
+        );
+    }
+    
+    // Work on current data (which was prefetched 4 iterations ago)
+    float val = data[idx];
+    output[idx] = expensive_compute(val);
+}
+```
+
+**The PTX instruction**: `prefetch.global.L2 [addr]` tells the memory subsystem to start fetching data into L2 cache without stalling the thread.
+
+There's no direct CUDA C++ equivalent. The `__builtin_prefetch` hint exists but doesn't reliably map to GPU prefetch instructions.
+
+### Example 3: Cache Bypass for Streaming Data
+
+Opposite problem: you have data you'll touch exactly once. Default caching pollutes L2 with data you'll never reuse, evicting data you actually need.
+
+```cuda
+__global__ void stream_process(float *input, float *output, int n) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    
+    float val;
+    // Load with cache streaming hint: minimal cache pollution
+    asm volatile(
+        "ld.global.cs.f32 %0, [%1];\n"
+        : "=f"(val) : "l"(&input[idx])
+    );
+    
+    float result = val * 2.0f;  // Simple transform
+    
+    // Store with write-through, no allocate
+    asm volatile(
+        "st.global.wt.f32 [%0], %1;\n"
+        :: "l"(&output[idx]), "f"(result)
+    );
+}
+```
+
+**The PTX instructions**:
+- `ld.global.cs` — "cache streaming": Load into L2 but mark for early eviction
+- `st.global.wt` — "write through": Write directly to memory, don't cache
+
+This can dramatically improve performance when you're bandwidth-bound and fighting cache thrashing.
+
+### Example 4: Warp-Level Reduction Without Shared Memory
+
+The compiler generates decent shuffle code for `__shfl_down_sync`, but sometimes you need precise control — especially when combining multiple reductions or avoiding register spills.
+
+```cuda
+__device__ float warp_reduce_sum(float val) {
+    // PTX lets us use specific register constraints
+    asm volatile(
+        "{\n"
+        "  .reg .f32 temp;\n"
+        "  shfl.sync.down.b32 temp, %0, 16, 0x1f, 0xffffffff;\n"
+        "  add.f32 %0, %0, temp;\n"
+        "  shfl.sync.down.b32 temp, %0, 8, 0x1f, 0xffffffff;\n"
+        "  add.f32 %0, %0, temp;\n"
+        "  shfl.sync.down.b32 temp, %0, 4, 0x1f, 0xffffffff;\n"
+        "  add.f32 %0, %0, temp;\n"
+        "  shfl.sync.down.b32 temp, %0, 2, 0x1f, 0xffffffff;\n"
+        "  add.f32 %0, %0, temp;\n"
+        "  shfl.sync.down.b32 temp, %0, 1, 0x1f, 0xffffffff;\n"
+        "  add.f32 %0, %0, temp;\n"
+        "}\n"
+        : "+f"(val)
+    );
+    return val;
+}
+```
+
+**Why PTX here?** 
+1. We use a *scoped temporary register* (`temp`) that the compiler can't spill
+2. We guarantee the exact instruction sequence with no reordering
+3. The explicit `0xffffffff` mask and `0x1f` clamp are visible
+
+### Example 5: Tensor Core MMA — Why WMMA Isn't Enough
+
+Tensor Cores are the backbone of modern AI workloads. CUDA provides the `nvcuda::wmma` API to access them. So why would you ever need PTX?
+
+**The WMMA workflow** looks like this:
+
+```cuda
+#include <mma.h>
+using namespace nvcuda;
+
+__global__ void matmul_wmma(half *A, half *B, float *C, float *D) {
+    wmma::fragment<wmma::matrix_a, 16, 16, 16, half, wmma::row_major> a_frag;
+    wmma::fragment<wmma::matrix_b, 16, 16, 16, half, wmma::col_major> b_frag;
+    wmma::fragment<wmma::accumulator, 16, 16, 16, float> c_frag;
+    
+    // Step 1: Load from memory into fragments
+    wmma::load_matrix_sync(a_frag, A, 16);
+    wmma::load_matrix_sync(b_frag, B, 16);
+    wmma::load_matrix_sync(c_frag, C, 16);
+    
+    // Step 2: MMA
+    wmma::mma_sync(c_frag, a_frag, b_frag, c_frag);
+    
+    // Step 3: Store fragments back to memory
+    wmma::store_matrix_sync(D, c_frag, 16, wmma::mem_row_major);
+}
+```
+
+This works fine for simple cases. But here's the problem: **fragments are opaque**. You can't look inside them. You can't construct them from register values. The only way to fill a fragment is `load_matrix_sync` from shared or global memory.
+
+**Why this hurts: the softmax-matmul pattern**
+
+In attention, you compute softmax(QK^T), then multiply by V. With WMMA:
+
+```cuda
+// Compute QK^T scores (result in registers after MMA)
+wmma::mma_sync(scores_frag, q_frag, k_frag, zeros_frag);
+
+// Now we need softmax...
+// But fragments are opaque! We can't access individual elements.
+// So we're forced to:
+
+// 1. Store to shared memory
+wmma::store_matrix_sync(smem_scores, scores_frag, 16, wmma::mem_row_major);
+__syncthreads();
+
+// 2. Load as regular floats, compute softmax
+float my_score = smem_scores[threadIdx.x];  // Each thread grabs elements
+float max_val = warp_reduce_max(my_score);
+float exp_val = expf(my_score - max_val);
+float sum_exp = warp_reduce_sum(exp_val);
+float softmax_val = exp_val / sum_exp;
+smem_scores[threadIdx.x] = softmax_val;
+__syncthreads();
+
+// 3. Reload into fragment for next MMA
+wmma::load_matrix_sync(scores_frag, smem_scores, 16);
+
+// 4. Finally multiply by V
+wmma::mma_sync(output_frag, scores_frag, v_frag, zeros_frag);
+```
+
+See the problem? We had the scores *in registers* after the first MMA. But WMMA's opacity forced us to:
+- Store to shared memory (latency + bandwidth)
+- Sync the block (stall)
+- Do softmax
+- Sync again
+- Reload into fragments (more bandwidth)
+
+That round-trip through shared memory can cost 30+ cycles *each way*, and you're doing it twice. In a memory-bound attention kernel, this is brutal.
+
+**The PTX solution: registers all the way**
+
+PTX `mma` instructions operate directly on registers. No fragments, no opacity. After an MMA, your results are just sitting in named registers — you can do whatever you want with them.
+
+```cuda
+__device__ void fused_attention_tile(
+    half *Q, half *K, half *V,  // Input tiles in shared memory
+    float *output               // Output tile
+) {
+    // Register arrays for MMA operands
+    unsigned A_regs[4];  // Q tile: 8 fp16 values packed into 4 u32
+    unsigned B_regs[4];  // K tile: 8 fp16 values packed into 4 u32
+    float C_regs[8] = {0};  // Accumulator: 8 fp32 values
+    
+    // Load Q and K tiles into registers (elided for clarity)
+    // ...
+    
+    // MMA: scores = Q @ K^T
+    // Output lands directly in C_regs — these are just registers!
+    asm volatile(
+        "mma.sync.aligned.m16n8k16.row.col.f32.f16.f16.f32 "
+        "{%0, %1, %2, %3, %4, %5, %6, %7}, "
+        "{%8, %9, %10, %11}, "
+        "{%12, %13, %14, %15}, "
+        "{%16, %17, %18, %19, %20, %21, %22, %23};\n"
+        : "=f"(C_regs[0]), "=f"(C_regs[1]), "=f"(C_regs[2]), "=f"(C_regs[3]),
+          "=f"(C_regs[4]), "=f"(C_regs[5]), "=f"(C_regs[6]), "=f"(C_regs[7])
+        : "r"(A_regs[0]), "r"(A_regs[1]), "r"(A_regs[2]), "r"(A_regs[3]),
+          "r"(B_regs[0]), "r"(B_regs[1]), "r"(B_regs[2]), "r"(B_regs[3]),
+          "f"(0.0f), "f"(0.0f), "f"(0.0f), "f"(0.0f),
+          "f"(0.0f), "f"(0.0f), "f"(0.0f), "f"(0.0f)
+    );
+    
+    // Softmax DIRECTLY on the registers — no shared memory!
+    float max_val = C_regs[0];
+    #pragma unroll
+    for (int i = 1; i < 8; i++) max_val = fmaxf(max_val, C_regs[i]);
+    max_val = warp_reduce_max(max_val);  // Cross-thread max via shuffles
+    
+    float sum_exp = 0.0f;
+    #pragma unroll
+    for (int i = 0; i < 8; i++) {
+        C_regs[i] = expf(C_regs[i] - max_val);
+        sum_exp += C_regs[i];
+    }
+    sum_exp = warp_reduce_sum(sum_exp);  // Cross-thread sum via shuffles
+    
+    #pragma unroll
+    for (int i = 0; i < 8; i++) {
+        C_regs[i] /= sum_exp;
+    }
+    
+    // Now pack softmax outputs back to fp16 for next MMA
+    // C_regs (fp32 softmax results) -> A_regs (fp16 packed)
+    #pragma unroll
+    for (int i = 0; i < 4; i++) {
+        half2 packed = __floats2half2_rn(C_regs[2*i], C_regs[2*i + 1]);
+        A_regs[i] = *reinterpret_cast<unsigned*>(&packed);
+    }
+    
+    // Load V tile into B_regs (elided)
+    // ...
+    
+    // Second MMA: output = softmax(scores) @ V
+    // Feed A_regs directly — still in registers, never touched memory!
+    asm volatile(
+        "mma.sync.aligned.m16n8k16.row.col.f32.f16.f16.f32 "
+        "{%0, %1, %2, %3, %4, %5, %6, %7}, "
+        "{%8, %9, %10, %11}, "
+        "{%12, %13, %14, %15}, "
+        "{%16, %17, %18, %19, %20, %21, %22, %23};\n"
+        : "=f"(C_regs[0]), "=f"(C_regs[1]), "=f"(C_regs[2]), "=f"(C_regs[3]),
+          "=f"(C_regs[4]), "=f"(C_regs[5]), "=f"(C_regs[6]), "=f"(C_regs[7])
+        : "r"(A_regs[0]), "r"(A_regs[1]), "r"(A_regs[2]), "r"(A_regs[3]),
+          "r"(B_regs[0]), "r"(B_regs[1]), "r"(B_regs[2]), "r"(B_regs[3]),
+          "f"(0.0f), "f"(0.0f), "f"(0.0f), "f"(0.0f),
+          "f"(0.0f), "f"(0.0f), "f"(0.0f), "f"(0.0f)
+    );
+    
+    // Store final output (elided)
+}
+```
+
+**What changed:**
+- After the first MMA, results are in `C_regs[]` — plain float variables
+- Softmax operates directly on those registers
+- We pack the softmax results back to fp16 *in registers*
+- Second MMA consumes them immediately — no shared memory round-trip
+
+**The performance difference**: In attention kernels, this pattern can save 100+ cycles per tile by eliminating shared memory traffic. FlashAttention and similar kernels rely on this — they're not using WMMA, they're using PTX `mma` (or CUTLASS's PTX wrappers).
+
+**The instruction breakdown**: `mma.sync.aligned.m16n8k16.row.col.f32.f16.f16.f32`
+- `mma.sync` — Warp-synchronous matrix multiply-accumulate
+- `.aligned` — Inputs are properly aligned (required)
+- `.m16n8k16` — Tile shape: M=16 rows, N=8 cols output, K=16 inner dimension
+- `.row.col` — A is row-major, B is column-major
+- `.f32.f16.f16.f32` — Accumulate in FP32, inputs are FP16
+
+Each thread in the warp holds a *piece* of the tile. The 32 threads collectively own the full 16×8 output. PTX tells you exactly which registers map to which elements — WMMA hides this behind "fragments."
+
+**One more thing: Hopper's wgmma**
+
+On H100, NVIDIA introduced `wgmma` — warp-group MMA operating on 128 threads with massive tiles (64×256×16). There's no WMMA API for this yet. PTX is the *only* way to access it:
+
+```cuda
+asm volatile(
+    "wgmma.mma_async.sync.aligned.m64n256k16.f32.f16.f16 "
+    "{%0, %1, ...}, desc_a, desc_b, scale_d, scale_a, scale_b;\n"
+    : /* 128+ output registers */
+    : /* TMA descriptors */
+);
+```
+
+If you're building inference engines targeting H100, you'll be writing PTX.
+
+### Example 6: Forcing Register Allocation
+
+Sometimes you know exactly how many registers a hot loop needs, and you want to prevent spills:
+
+```cuda
+__global__ __launch_bounds__(256, 4)  // 256 threads, aim for 4 blocks/SM
+void register_controlled_kernel(float *data) {
+    // Force specific register usage with PTX
+    float a, b, c, d;
+    asm volatile(
+        "{\n"
+        "  .reg .f32 r0, r1, r2, r3;\n"  // Explicitly named registers
+        "  ld.global.f32 r0, [%4];\n"
+        "  ld.global.f32 r1, [%4+4];\n"
+        "  ld.global.f32 r2, [%4+8];\n"
+        "  ld.global.f32 r3, [%4+12];\n"
+        "  // ... compute ...\n"
+        "  mul.f32 r0, r0, r1;\n"
+        "  fma.rn.f32 r0, r2, r3, r0;\n"
+        "  mov.f32 %0, r0;\n"
+        "  mov.f32 %1, r1;\n"
+        "  mov.f32 %2, r2;\n"
+        "  mov.f32 %3, r3;\n"
+        "}\n"
+        : "=f"(a), "=f"(b), "=f"(c), "=f"(d)
+        : "l"(data + threadIdx.x * 4)
+    );
+}
+```
+
+The scoped block `{ }` with explicit `.reg` declarations tells `ptxas` exactly what you need. Combined with `__launch_bounds__`, this gives you fine-grained occupancy control.
+
+---
+
+### When NOT to Use PTX
+
+PTX is a sharp tool. Don't reach for it when:
+
+- **The compiler does fine** — Check `nvcc -ptx` output first. Often it's already optimal.
+- **Readability matters more** — PTX is hard to maintain. Future-you will curse present-you.
+- **Portability matters** — Some PTX features are architecture-specific. Your sm_80 code might not run on sm_90.
+- **You're guessing** — Profile first. PTX micro-optimizations rarely beat algorithmic improvements.
+
+**Rule of thumb**: Use PTX for the innermost 10% of your kernel that runs 90% of the time, after you've verified the compiler isn't already doing what you need
+
+--- -->
+
+        </section>
+        <div class="post-tags">
+          
+          
+          
+        </div>
+      </div>
+
+      
+      
+    </div>
+
+    </article>
+</main>
+<footer>
+  <div style="display:flex"></div>
+  <div class="footer-info">
+    2026  <a
+      href="https://github.com/athul/archie">Archie Theme</a> | Built with <a href="https://gohugo.io">Hugo</a>
+  </div>
+</footer>
+
+</div>
+    </body>
+</html>
