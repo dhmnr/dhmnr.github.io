@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 360" font-family="JetBrains Mono,Consolas,monospace">
+<rect width="520" height="360" fill="#0f1117" rx="8"/>
+<text x="260" y="28" text-anchor="middle" fill="#c9cdd6" font-size="14" font-weight="bold">Shared Memory Contention (262K tiles)</text>
+<line x1="65" y1="250.45454545454544" x2="495" y2="250.45454545454544" stroke="#2a2d3a" stroke-dasharray="3,3"/>
+<text x="57" y="254.45454545454544" text-anchor="end" fill="#8b90a0" font-size="10">0.1</text>
+<line x1="65" y1="205.9090909090909" x2="495" y2="205.9090909090909" stroke="#2a2d3a" stroke-dasharray="3,3"/>
+<text x="57" y="209.9090909090909" text-anchor="end" fill="#8b90a0" font-size="10">0.2</text>
+<line x1="65" y1="161.36363636363637" x2="495" y2="161.36363636363637" stroke="#2a2d3a" stroke-dasharray="3,3"/>
+<text x="57" y="165.36363636363637" text-anchor="end" fill="#8b90a0" font-size="10">0.3</text>
+<line x1="65" y1="116.81818181818181" x2="495" y2="116.81818181818181" stroke="#2a2d3a" stroke-dasharray="3,3"/>
+<text x="57" y="120.81818181818181" text-anchor="end" fill="#8b90a0" font-size="10">0.4</text>
+<line x1="65" y1="72.27272727272728" x2="495" y2="72.27272727272728" stroke="#2a2d3a" stroke-dasharray="3,3"/>
+<text x="57" y="76.27272727272728" text-anchor="end" fill="#8b90a0" font-size="10">0.5</text>
+<rect x="86.15" y="81.62727272727275" width="30.1" height="213.37272727272725" fill="#4477AA" rx="2" opacity="0.8"/>
+<text x="101.2" y="75.62727272727275" text-anchor="middle" fill="#6699CC" font-size="9">0.48</text>
+<rect x="121.25" y="222.74727272727273" width="30.1" height="72.25272727272727" fill="#EE7733" rx="2" opacity="0.8"/>
+<text x="136.3" y="216.74727272727273" text-anchor="middle" fill="#FFAA66" font-size="9">0.16</text>
+<text x="118.75" y="311.0" text-anchor="middle" fill="#c9cdd6" font-size="11" font-weight="bold">3.0x</text>
+<text x="118.75" y="327.0" text-anchor="middle" fill="#8b90a0" font-size="11">1 warp</text>
+<rect x="193.65" y="81.18181818181822" width="30.1" height="213.81818181818178" fill="#4477AA" rx="2" opacity="0.8"/>
+<text x="208.7" y="75.18181818181822" text-anchor="middle" fill="#6699CC" font-size="9">0.48</text>
+<rect x="228.75" y="233.6609090909091" width="30.1" height="61.339090909090906" fill="#EE7733" rx="2" opacity="0.8"/>
+<text x="243.8" y="227.6609090909091" text-anchor="middle" fill="#FFAA66" font-size="9">0.14</text>
+<text x="226.25" y="311.0" text-anchor="middle" fill="#c9cdd6" font-size="11" font-weight="bold">3.5x</text>
+<text x="226.25" y="327.0" text-anchor="middle" fill="#8b90a0" font-size="11">2 warps</text>
+<rect x="301.15" y="86.03727272727275" width="30.1" height="208.96272727272725" fill="#4477AA" rx="2" opacity="0.8"/>
+<text x="316.2" y="80.03727272727275" text-anchor="middle" fill="#6699CC" font-size="9">0.47</text>
+<rect x="336.25" y="234.24" width="30.1" height="60.75999999999999" fill="#EE7733" rx="2" opacity="0.8"/>
+<text x="351.3" y="228.24" text-anchor="middle" fill="#FFAA66" font-size="9">0.14</text>
+<text x="333.75" y="311.0" text-anchor="middle" fill="#c9cdd6" font-size="11" font-weight="bold">3.4x</text>
+<text x="333.75" y="327.0" text-anchor="middle" fill="#8b90a0" font-size="11">4 warps</text>
+<rect x="408.65" y="144.3918181818182" width="30.1" height="150.6081818181818" fill="#4477AA" rx="2" opacity="0.8"/>
+<text x="423.7" y="138.3918181818182" text-anchor="middle" fill="#6699CC" font-size="9">0.34</text>
+<rect x="443.75" y="236.2" width="30.1" height="58.8" fill="#EE7733" rx="2" opacity="0.8"/>
+<text x="458.8" y="230.2" text-anchor="middle" fill="#FFAA66" font-size="9">0.13</text>
+<text x="441.25" y="311.0" text-anchor="middle" fill="#c9cdd6" font-size="11" font-weight="bold">2.6x</text>
+<text x="441.25" y="327.0" text-anchor="middle" fill="#8b90a0" font-size="11">8 warps</text>
+<rect x="365" y="58" width="10" height="10" fill="#4477AA" rx="2"/>
+<text x="380" y="67" fill="#6699CC" font-size="10">WMMA</text>
+<rect x="430" y="58" width="10" height="10" fill="#EE7733" rx="2"/>
+<text x="445" y="67" fill="#FFAA66" font-size="10">PTX</text>
+<text x="260" y="352" text-anchor="middle" fill="#8b90a0" font-size="11">Warps per Block</text>
+<text x="14" y="172" text-anchor="middle" fill="#8b90a0" font-size="11" transform="rotate(-90 14 172)">Latency (ms)</text>
+</svg>

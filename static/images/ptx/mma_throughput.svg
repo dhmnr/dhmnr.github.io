@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 380" font-family="JetBrains Mono,Consolas,monospace">
+<rect width="700" height="380" fill="#0f1117" rx="8"/>
+<text x="350" y="32" text-anchor="middle" fill="#c9cdd6" font-size="15" font-weight="bold">Attention Throughput (M tiles/sec)</text>
+<line x1="90" y1="255.9241784137228" x2="660" y2="255.9241784137228" stroke="#2a2d3a" stroke-dasharray="3,3"/>
+<text x="82" y="259.9241784137228" text-anchor="end" fill="#8b90a0" font-size="10">500</text>
+<line x1="90" y1="201.84835682744563" x2="660" y2="201.84835682744563" stroke="#2a2d3a" stroke-dasharray="3,3"/>
+<text x="82" y="205.84835682744563" text-anchor="end" fill="#8b90a0" font-size="10">1000</text>
+<line x1="90" y1="147.77253524116844" x2="660" y2="147.77253524116844" stroke="#2a2d3a" stroke-dasharray="3,3"/>
+<text x="82" y="151.77253524116844" text-anchor="end" fill="#8b90a0" font-size="10">1500</text>
+<line x1="90" y1="93.69671365489128" x2="660" y2="93.69671365489128" stroke="#2a2d3a" stroke-dasharray="3,3"/>
+<text x="82" y="97.69671365489128" text-anchor="end" fill="#8b90a0" font-size="10">2000</text>
+<line x1="90.0" y1="310" x2="90.0" y2="315" stroke="#2a2d3a"/>
+<text x="90.0" y="328" text-anchor="middle" fill="#8b90a0" font-size="10">1K</text>
+<line x1="216.66666666666666" y1="310" x2="216.66666666666666" y2="315" stroke="#2a2d3a"/>
+<text x="216.66666666666666" y="328" text-anchor="middle" fill="#8b90a0" font-size="10">4K</text>
+<line x1="343.3333333333333" y1="310" x2="343.3333333333333" y2="315" stroke="#2a2d3a"/>
+<text x="343.3333333333333" y="328" text-anchor="middle" fill="#8b90a0" font-size="10">16K</text>
+<line x1="470.0" y1="310" x2="470.0" y2="315" stroke="#2a2d3a"/>
+<text x="470.0" y="328" text-anchor="middle" fill="#8b90a0" font-size="10">64K</text>
+<line x1="533.3333333333333" y1="310" x2="533.3333333333333" y2="315" stroke="#2a2d3a"/>
+<text x="533.3333333333333" y="328" text-anchor="middle" fill="#8b90a0" font-size="10">128K</text>
+<line x1="596.6666666666666" y1="310" x2="596.6666666666666" y2="315" stroke="#2a2d3a"/>
+<text x="596.6666666666666" y="328" text-anchor="middle" fill="#8b90a0" font-size="10">256K</text>
+<line x1="660.0" y1="310" x2="660.0" y2="315" stroke="#2a2d3a"/>
+<text x="660.0" y="328" text-anchor="middle" fill="#8b90a0" font-size="10">512K</text>
+<line x1="90" y1="50" x2="90" y2="310" stroke="#2a2d3a"/>
+<line x1="90" y1="310" x2="660" y2="310" stroke="#2a2d3a"/>
+<polygon points="90.0,307.4830163043478 216.66666666666666,299.74562198067633 343.3333333333333,269.5443716497915 470.0,168.24347826086955 533.3333333333333,106.91042730783604 596.6666666666666,135.2077413820833 660.0,83.91304347826085 660.0,227.55945231803986 596.6666666666666,250.81147317781608 533.3333333333333,238.8727939091167 470.0,267.78543128673897 343.3333333333333,298.7280119482244 216.66666666666666,307.1802092270224 90.0,309.32880434782606" fill="#EE7733" opacity="0.07"/>
+<polyline points="90.0,307.4830163043478 216.66666666666666,299.74562198067633 343.3333333333333,269.5443716497915 470.0,168.24347826086955 533.3333333333333,106.91042730783604 596.6666666666666,135.2077413820833 660.0,83.91304347826085" fill="none" stroke="#EE7733" stroke-width="2.5"/>
+<circle cx="90.0" cy="307.4830163043478" r="4.5" fill="#EE7733"/>
+<circle cx="216.66666666666666" cy="299.74562198067633" r="4.5" fill="#EE7733"/>
+<circle cx="343.3333333333333" cy="269.5443716497915" r="4.5" fill="#EE7733"/>
+<circle cx="470.0" cy="168.24347826086955" r="4.5" fill="#EE7733"/>
+<circle cx="533.3333333333333" cy="106.91042730783604" r="4.5" fill="#EE7733"/>
+<circle cx="596.6666666666666" cy="135.2077413820833" r="4.5" fill="#EE7733"/>
+<circle cx="660.0" cy="83.91304347826085" r="4.5" fill="#EE7733"/>
+<polyline points="90.0,309.32880434782606 216.66666666666666,307.1802092270224 343.3333333333333,298.7280119482244 470.0,267.78543128673897 533.3333333333333,238.8727939091167 596.6666666666666,250.81147317781608 660.0,227.55945231803986" fill="none" stroke="#4477AA" stroke-width="2.5" stroke-dasharray="8,4"/>
+<rect x="86.0" y="305.32880434782606" width="8" height="8" fill="#4477AA" rx="1"/>
+<rect x="212.66666666666666" y="303.1802092270224" width="8" height="8" fill="#4477AA" rx="1"/>
+<rect x="339.3333333333333" y="294.7280119482244" width="8" height="8" fill="#4477AA" rx="1"/>
+<rect x="466.0" y="263.78543128673897" width="8" height="8" fill="#4477AA" rx="1"/>
+<rect x="529.3333333333333" y="234.8727939091167" width="8" height="8" fill="#4477AA" rx="1"/>
+<rect x="592.6666666666666" y="246.81147317781608" width="8" height="8" fill="#4477AA" rx="1"/>
+<rect x="656.0" y="223.55945231803986" width="8" height="8" fill="#4477AA" rx="1"/>
+<line x1="470" y1="66" x2="490" y2="66" stroke="#EE7733" stroke-width="2"/>
+<circle cx="480" cy="66" r="3.5" fill="#EE7733"/>
+<text x="496" y="70" fill="#FFAA66" font-size="11">PTX mma</text>
+<line x1="470" y1="84" x2="490" y2="84" stroke="#4477AA" stroke-width="2" stroke-dasharray="6,3"/>
+<rect x="477" y="80" width="7" height="7" fill="#4477AA" rx="1"/>
+<text x="496" y="88" fill="#6699CC" font-size="11">WMMA</text>
+<text x="350" y="370" text-anchor="middle" fill="#8b90a0" font-size="11">Attention Tiles</text>
+</svg>

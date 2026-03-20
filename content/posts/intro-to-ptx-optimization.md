@@ -1,6 +1,6 @@
 +++
 date = '2025-11-12T01:09:00-08:00'
-draft = true
+draft = false
 title = 'Intro to PTX Optimization : Part 1'
 +++
 If you're trying to push your GPU harder than CUDA C++ allows, eventually you end up at PTX. It's NVIDIA's intermediate representation, sitting between your kernel code and the hardware.
@@ -307,6 +307,8 @@ PTX gives you explicit control.
 
 ## Software Pipelining with Async Copies
 
+<img src="/images/ptx/pipeline_timeline.svg" alt="Pipeline execution timeline: naive vs pipelined" style="width:100%;max-width:780px;margin:1em auto;display:block;">
+
 Here's a real optimization pattern. Consider a kernel processing chunks of data:
 
 ```cuda
@@ -367,7 +369,13 @@ __global__ void process_pipelined(float *input, float *output, int n) {
         }
         
         // Wait for CURRENT tile to arrive
-        asm volatile("cp.async.wait_group 1;\n");
+        // wait_group 1 when next load was issued (2 groups in flight),
+        // wait_group 0 on last iteration (only 1 group, must drain it)
+        if (i + 256 < n) {
+            asm volatile("cp.async.wait_group 1;\n");
+        } else {
+            asm volatile("cp.async.wait_group 0;\n");
+        }
         __syncthreads();
         
         // Compute on current tile while next tile loads
@@ -398,7 +406,7 @@ After the first load, memory latency is hidden. Compute never stalls waiting for
 
 `cp.async.commit_group` marks the current batch of async copies as a group. You can have multiple groups in flight.
 
-`cp.async.wait_group N` blocks until at most N groups are still pending. So `wait_group 1` means "wait until the oldest group is done, but let one group keep loading." `wait_group 0` drains everything.
+`cp.async.wait_group N` blocks until at most N groups are still pending. So `wait_group 1` means "I'm okay with one group still in flight — wait for everything else." `wait_group 0` drains everything. Be careful: if only one group is pending, `wait_group 1` returns immediately without waiting for it. That's why the code uses `wait_group 0` on the last iteration when there's no next load in flight.
 
 ### Why not just use cuda::memcpy_async?
 
@@ -410,127 +418,20 @@ You can. CUDA 11+ exposes `cuda::memcpy_async` and `cuda::pipeline` which compil
 
 For production code, try the CUDA abstractions first. Drop to PTX when the compiler isn't giving you what you need, or when you want to understand exactly what's happening.
 
---- 
-
-
-## Further Reading
-
-- [PTX ISA Reference](https://docs.nvidia.com/cuda/parallel-thread-execution/) — The definitive 400+ page spec
-- [CUDA Binary Utilities](https://docs.nvidia.com/cuda/cuda-binary-utilities/) — `cuobjdump`, `nvdisasm` for inspecting binaries
-- [Inline PTX Assembly in CUDA](https://docs.nvidia.com/cuda/inline-ptx-assembly/)
-
 ---
 
+## Beyond Async Copies
 
+Async copies are the most common entry point to PTX, but they're far from the only one. Here are more cases where PTX gives you something CUDA C++ can't.
 
-## Conclusion
+### Explicit Prefetching to L2
 
-PTX is a sharp tool, not a magic one. Dropping to PTX won't automatically make your code faster. Most of the time, the compiler does fine. When it doesn't, the problem is usually algorithmic or architectural, not instruction selection.
-But when you've done everything else right and you need precise control over memory operations, instruction scheduling, or hardware features the compiler won't touch, PTX is there. It's not the first thing to reach for. It's the last.
-The value in learning it isn't that you'll write PTX every day. It's that you'll understand what your CUDA code becomes, why the compiler makes the choices it does, and where the real bottlenecks live. That understanding pays off even when you never write a single asm statement.
-
----
-
-*Questions? Found an error? Let me know in the comments.*
-
-<!-- 
-## When to Actually Use PTX: Real Examples
-
-Knowing *what* PTX is doesn't tell you *when* to reach for it. Here are concrete scenarios where inline PTX or hand-written PTX kernels solve problems that CUDA C++ can't — or won't.
-
-### Example 1: Software Pipelining with Async Copies
-
-The most common reason to drop into PTX: **overlapping memory transfers with computation**. Modern GPUs (Ampere+) have dedicated hardware for async global-to-shared memory copies. CUDA provides `cuda::memcpy_async`, but the compiler is conservative about scheduling. Sometimes you need explicit control.
-
-Here's the problem. Consider a kernel processing chunks of data:
-
-```cuda
-// Naive CUDA: Load, compute, repeat
-__global__ void process(float *input, float *output, int n) {
-    __shared__ float tile[256];
-    
-    for (int i = 0; i < n; i += 256) {
-        // Load phase (memory latency here!)
-        tile[threadIdx.x] = input[i + threadIdx.x];
-        __syncthreads();
-        
-        // Compute phase (ALUs idle during load above)
-        float result = expensive_compute(tile[threadIdx.x]);
-        output[i + threadIdx.x] = result;
-        __syncthreads();
-    }
-}
-```
-
-The timeline looks like this — compute units sit idle waiting for memory:
-
-```
-Iteration 0:  [===LOAD===][===COMPUTE===]
-Iteration 1:                             [===LOAD===][===COMPUTE===]
-```
-
-**The PTX solution**: Use `cp.async` to overlap the *next* iteration's load with the *current* iteration's compute:
-
-```cuda
-__global__ void process_pipelined(float *input, float *output, int n) {
-    __shared__ float tile[2][256];  // Double buffer
-    int buf = 0;
-    
-    // Prime the pipeline: async load first tile
-    asm volatile(
-        "cp.async.cg.shared.global [%0], [%1], 4;\n"
-        :: "r"(&tile[buf][threadIdx.x]), 
-           "l"(&input[threadIdx.x])
-    );
-    asm volatile("cp.async.commit_group;\n");
-    
-    for (int i = 0; i < n; i += 256) {
-        int next_buf = buf ^ 1;
-        
-        // Start async load for NEXT iteration
-        if (i + 256 < n) {
-            asm volatile(
-                "cp.async.cg.shared.global [%0], [%1], 4;\n"
-                :: "r"(&tile[next_buf][threadIdx.x]), 
-                   "l"(&input[i + 256 + threadIdx.x])
-            );
-            asm volatile("cp.async.commit_group;\n");
-        }
-        
-        // Wait for CURRENT tile to arrive
-        asm volatile("cp.async.wait_group 1;\n");  // Wait until ≤1 group pending
-        __syncthreads();
-        
-        // Compute on current tile (while next tile loads!)
-        float result = expensive_compute(tile[buf][threadIdx.x]);
-        output[i + threadIdx.x] = result;
-        
-        buf = next_buf;
-    }
-    
-    // Drain pipeline
-    asm volatile("cp.async.wait_group 0;\n");
-}
-```
-
-Now the timeline overlaps:
-
-```
-          [==LOAD 0==]
-                     [==LOAD 1==][==LOAD 2==][==LOAD 3==]
-                     [==COMP 0==][==COMP 1==][==COMP 2==][==COMP 3==]
-```
-
-**Why PTX?** The `cp.async` family, `commit_group`, and `wait_group` give you explicit control over the async copy pipeline. The compiler *might* do this with `cuda::memcpy_async` and `cuda::pipeline`, but the PTX version lets you see exactly what's happening and tune the pipeline depth.
-
-### Example 2: Explicit Prefetching to L2
-
-Sometimes you know your access pattern better than the compiler. Global loads have ~400 cycle latency. If you can prefetch data 400 cycles before you need it, you hide that latency entirely.
+Sometimes you know your access pattern better than the hardware. Global loads have ~400 cycle latency. If you can prefetch data well before you need it, you hide that latency.
 
 ```cuda
 __global__ void compute_with_prefetch(float *data, float *output, int n) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    
+
     // Prefetch data we'll need 4 iterations from now
     if (idx + 4 * gridDim.x * blockDim.x < n) {
         asm volatile(
@@ -538,34 +439,34 @@ __global__ void compute_with_prefetch(float *data, float *output, int n) {
             :: "l"(&data[idx + 4 * gridDim.x * blockDim.x])
         );
     }
-    
+
     // Work on current data (which was prefetched 4 iterations ago)
     float val = data[idx];
     output[idx] = expensive_compute(val);
 }
 ```
 
-**The PTX instruction**: `prefetch.global.L2 [addr]` tells the memory subsystem to start fetching data into L2 cache without stalling the thread.
+`prefetch.global.L2 [addr]` tells the memory subsystem to start fetching data into L2 cache without stalling the thread. There's no CUDA C++ device-side equivalent — `__builtin_prefetch` is a host compiler intrinsic that doesn't map to GPU prefetch instructions.
 
-There's no direct CUDA C++ equivalent. The `__builtin_prefetch` hint exists but doesn't reliably map to GPU prefetch instructions.
+### Cache Bypass for Streaming Data
 
-### Example 3: Cache Bypass for Streaming Data
+<img src="/images/ptx/cache_hierarchy.svg" alt="Cache hierarchy: default vs streaming hints" style="width:100%;max-width:780px;margin:1em auto;display:block;">
 
 Opposite problem: you have data you'll touch exactly once. Default caching pollutes L2 with data you'll never reuse, evicting data you actually need.
 
 ```cuda
 __global__ void stream_process(float *input, float *output, int n) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    
+
     float val;
     // Load with cache streaming hint: minimal cache pollution
     asm volatile(
         "ld.global.cs.f32 %0, [%1];\n"
         : "=f"(val) : "l"(&input[idx])
     );
-    
+
     float result = val * 2.0f;  // Simple transform
-    
+
     // Store with write-through, no allocate
     asm volatile(
         "st.global.wt.f32 [%0], %1;\n"
@@ -574,19 +475,17 @@ __global__ void stream_process(float *input, float *output, int n) {
 }
 ```
 
-**The PTX instructions**:
-- `ld.global.cs` — "cache streaming": Load into L2 but mark for early eviction
-- `st.global.wt` — "write through": Write directly to memory, don't cache
+- `ld.global.cs` — "cache streaming": load into L2 but mark for early eviction
+- `st.global.wt` — "write through": write directly to memory, skip cache allocation
 
 This can dramatically improve performance when you're bandwidth-bound and fighting cache thrashing.
 
-### Example 4: Warp-Level Reduction Without Shared Memory
+### Warp-Level Reduction Without Shared Memory
 
 The compiler generates decent shuffle code for `__shfl_down_sync`, but sometimes you need precise control — especially when combining multiple reductions or avoiding register spills.
 
 ```cuda
 __device__ float warp_reduce_sum(float val) {
-    // PTX lets us use specific register constraints
     asm volatile(
         "{\n"
         "  .reg .f32 temp;\n"
@@ -607,12 +506,11 @@ __device__ float warp_reduce_sum(float val) {
 }
 ```
 
-**Why PTX here?** 
-1. We use a *scoped temporary register* (`temp`) that the compiler can't spill
-2. We guarantee the exact instruction sequence with no reordering
-3. The explicit `0xffffffff` mask and `0x1f` clamp are visible
+The scoped block with an explicit temporary register (`temp`) that the compiler can't spill, a guaranteed instruction sequence with no reordering, and the explicit `0xffffffff` mask and `0x1f` clamp are all visible and locked down.
 
-### Example 5: Tensor Core MMA — Why WMMA Isn't Enough
+### Tensor Core MMA — Why WMMA Isn't Enough
+
+<img src="/images/ptx/mma_dataflow.svg" alt="MMA attention data flow: WMMA shared memory path vs PTX register path" style="width:100%;max-width:780px;margin:1em auto;display:block;">
 
 Tensor Cores are the backbone of modern AI workloads. CUDA provides the `nvcuda::wmma` API to access them. So why would you ever need PTX?
 
@@ -626,66 +524,69 @@ __global__ void matmul_wmma(half *A, half *B, float *C, float *D) {
     wmma::fragment<wmma::matrix_a, 16, 16, 16, half, wmma::row_major> a_frag;
     wmma::fragment<wmma::matrix_b, 16, 16, 16, half, wmma::col_major> b_frag;
     wmma::fragment<wmma::accumulator, 16, 16, 16, float> c_frag;
-    
-    // Step 1: Load from memory into fragments
+
     wmma::load_matrix_sync(a_frag, A, 16);
     wmma::load_matrix_sync(b_frag, B, 16);
     wmma::load_matrix_sync(c_frag, C, 16);
-    
-    // Step 2: MMA
+
     wmma::mma_sync(c_frag, a_frag, b_frag, c_frag);
-    
-    // Step 3: Store fragments back to memory
+
     wmma::store_matrix_sync(D, c_frag, 16, wmma::mem_row_major);
 }
 ```
 
-This works fine for simple cases. But here's the problem: **fragments are opaque**. You can't look inside them. You can't construct them from register values. The only way to fill a fragment is `load_matrix_sync` from shared or global memory.
+This works fine for simple cases. Fragments aren't fully opaque — you *can* access individual elements via `fragment.x[i]`, and `fragment.num_elements` tells you how many each thread holds. For element-wise operations like scaling or adding a bias, this works fine:
+
+```cuda
+// Element-wise ops work — no shared memory needed
+for (int i = 0; i < c_frag.num_elements; i++)
+    c_frag.x[i] = alpha * c_frag.x[i] + beta;
+```
+
+But here's the catch: **the mapping of matrix elements to `fragment.x[]` indices is unspecified**. The CUDA docs explicitly state this, and NVIDIA staff have confirmed it should not be relied upon. Each thread holds `num_elements` values, but you don't know which row or column of the matrix they correspond to.
+
+For element-wise operations, this doesn't matter — you're applying the same function to every element regardless of position. But for **row-wise operations** like softmax, it's a problem.
 
 **Why this hurts: the softmax-matmul pattern**
 
-In attention, you compute softmax(QK^T), then multiply by V. With WMMA:
+In attention, you compute softmax(QK^T), then multiply by V. Softmax is *row-wise*: each row of the score matrix gets its own max and normalization. With WMMA, you don't know which elements belong to which row, so you're forced to round-trip through shared memory where the layout is known:
 
 ```cuda
-// Compute QK^T scores (result in registers after MMA)
+// QK^T — result lands in a fragment
 wmma::mma_sync(scores_frag, q_frag, k_frag, zeros_frag);
 
-// Now we need softmax...
-// But fragments are opaque! We can't access individual elements.
-// So we're forced to:
-
-// 1. Store to shared memory
+// We have fragment.x[] access, but don't know which ROW each element belongs to.
+// Softmax needs row-wise max and sum, so we must go through shared memory:
 wmma::store_matrix_sync(smem_scores, scores_frag, 16, wmma::mem_row_major);
 __syncthreads();
 
-// 2. Load as regular floats, compute softmax
-float my_score = smem_scores[threadIdx.x];  // Each thread grabs elements
+// Now the layout is known — do row-wise softmax
+float my_score = smem_scores[threadIdx.x];
 float max_val = warp_reduce_max(my_score);
 float exp_val = expf(my_score - max_val);
 float sum_exp = warp_reduce_sum(exp_val);
-float softmax_val = exp_val / sum_exp;
-smem_scores[threadIdx.x] = softmax_val;
+smem_scores[threadIdx.x] = exp_val / sum_exp;
 __syncthreads();
 
-// 3. Reload into fragment for next MMA
+// Reload into fragment for next MMA
 wmma::load_matrix_sync(scores_frag, smem_scores, 16);
 
-// 4. Finally multiply by V
+// Finally multiply by V
 wmma::mma_sync(output_frag, scores_frag, v_frag, zeros_frag);
 ```
 
-See the problem? We had the scores *in registers* after the first MMA. But WMMA's opacity forced us to:
-- Store to shared memory (latency + bandwidth)
-- Sync the block (stall)
-- Do softmax
-- Sync again
-- Reload into fragments (more bandwidth)
-
-That round-trip through shared memory can cost 30+ cycles *each way*, and you're doing it twice. In a memory-bound attention kernel, this is brutal.
+The scores were *in registers* after the first MMA. But without knowing the row layout, softmax requires a shared memory round-trip — store, sync, softmax, sync, reload. That's 30+ cycles each way, and it gets worse when multiple warps compete for shared memory bandwidth.
 
 **The PTX solution: registers all the way**
 
-PTX `mma` instructions operate directly on registers. No fragments, no opacity. After an MMA, your results are just sitting in named registers — you can do whatever you want with them.
+PTX `mma` instructions operate directly on registers, and critically, the **thread-to-element mapping is fully documented** in the PTX ISA. After an MMA, you know exactly which matrix row and column each register value corresponds to. Row-wise softmax becomes a register operation.
+
+For `mma.sync.aligned.m16n8k16.row.col.f32.f16.f16.f32` on sm_80, each thread in the warp holds:
+- **A**: 4 registers of `.b32` (8 fp16 values packed pairwise)
+- **B**: 2 registers of `.b32` (4 fp16 values packed pairwise)
+- **C/D**: 4 registers of `.f32` (the accumulator input/output)
+
+The 32 threads collectively own the full 16×8 tile. Here's how a fused attention tile looks:
 
 ```cuda
 __device__ void fused_attention_tile(
@@ -694,74 +595,72 @@ __device__ void fused_attention_tile(
 ) {
     // Register arrays for MMA operands
     unsigned A_regs[4];  // Q tile: 8 fp16 values packed into 4 u32
-    unsigned B_regs[4];  // K tile: 8 fp16 values packed into 4 u32
-    float C_regs[8] = {0};  // Accumulator: 8 fp32 values
-    
+    unsigned B_regs[2];  // K tile: 4 fp16 values packed into 2 u32
+    float C_regs[4] = {0};  // Accumulator: 4 fp32 values per thread
+
     // Load Q and K tiles into registers (elided for clarity)
     // ...
-    
+
     // MMA: scores = Q @ K^T
-    // Output lands directly in C_regs — these are just registers!
+    // Output lands directly in C_regs — just plain registers
     asm volatile(
         "mma.sync.aligned.m16n8k16.row.col.f32.f16.f16.f32 "
-        "{%0, %1, %2, %3, %4, %5, %6, %7}, "
-        "{%8, %9, %10, %11}, "
-        "{%12, %13, %14, %15}, "
-        "{%16, %17, %18, %19, %20, %21, %22, %23};\n"
-        : "=f"(C_regs[0]), "=f"(C_regs[1]), "=f"(C_regs[2]), "=f"(C_regs[3]),
-          "=f"(C_regs[4]), "=f"(C_regs[5]), "=f"(C_regs[6]), "=f"(C_regs[7])
+        "{%0, %1, %2, %3}, "
+        "{%4, %5, %6, %7}, "
+        "{%8, %9}, "
+        "{%10, %11, %12, %13};\n"
+        : "=f"(C_regs[0]), "=f"(C_regs[1]), "=f"(C_regs[2]), "=f"(C_regs[3])
         : "r"(A_regs[0]), "r"(A_regs[1]), "r"(A_regs[2]), "r"(A_regs[3]),
-          "r"(B_regs[0]), "r"(B_regs[1]), "r"(B_regs[2]), "r"(B_regs[3]),
-          "f"(0.0f), "f"(0.0f), "f"(0.0f), "f"(0.0f),
+          "r"(B_regs[0]), "r"(B_regs[1]),
           "f"(0.0f), "f"(0.0f), "f"(0.0f), "f"(0.0f)
     );
-    
-    // Softmax DIRECTLY on the registers — no shared memory!
+
+    // Softmax DIRECTLY on registers — no shared memory!
     float max_val = C_regs[0];
     #pragma unroll
-    for (int i = 1; i < 8; i++) max_val = fmaxf(max_val, C_regs[i]);
+    for (int i = 1; i < 4; i++) max_val = fmaxf(max_val, C_regs[i]);
     max_val = warp_reduce_max(max_val);  // Cross-thread max via shuffles
-    
+
     float sum_exp = 0.0f;
     #pragma unroll
-    for (int i = 0; i < 8; i++) {
+    for (int i = 0; i < 4; i++) {
         C_regs[i] = expf(C_regs[i] - max_val);
         sum_exp += C_regs[i];
     }
     sum_exp = warp_reduce_sum(sum_exp);  // Cross-thread sum via shuffles
-    
-    #pragma unroll
-    for (int i = 0; i < 8; i++) {
-        C_regs[i] /= sum_exp;
-    }
-    
-    // Now pack softmax outputs back to fp16 for next MMA
-    // C_regs (fp32 softmax results) -> A_regs (fp16 packed)
+
     #pragma unroll
     for (int i = 0; i < 4; i++) {
+        C_regs[i] /= sum_exp;
+    }
+
+    // Pack softmax outputs back to fp16 for next MMA
+    // The MMA output layout (D-format) doesn't directly match the A-input layout,
+    // so warp shuffles are needed to rearrange registers between threads (elided)
+    #pragma unroll
+    for (int i = 0; i < 2; i++) {
         half2 packed = __floats2half2_rn(C_regs[2*i], C_regs[2*i + 1]);
         A_regs[i] = *reinterpret_cast<unsigned*>(&packed);
     }
-    
+    // Remaining A_regs filled via warp shuffles to complete the layout (elided)
+
     // Load V tile into B_regs (elided)
     // ...
-    
+
     // Second MMA: output = softmax(scores) @ V
-    // Feed A_regs directly — still in registers, never touched memory!
+    // Still in registers — never touched shared memory
     asm volatile(
         "mma.sync.aligned.m16n8k16.row.col.f32.f16.f16.f32 "
-        "{%0, %1, %2, %3, %4, %5, %6, %7}, "
-        "{%8, %9, %10, %11}, "
-        "{%12, %13, %14, %15}, "
-        "{%16, %17, %18, %19, %20, %21, %22, %23};\n"
-        : "=f"(C_regs[0]), "=f"(C_regs[1]), "=f"(C_regs[2]), "=f"(C_regs[3]),
-          "=f"(C_regs[4]), "=f"(C_regs[5]), "=f"(C_regs[6]), "=f"(C_regs[7])
+        "{%0, %1, %2, %3}, "
+        "{%4, %5, %6, %7}, "
+        "{%8, %9}, "
+        "{%10, %11, %12, %13};\n"
+        : "=f"(C_regs[0]), "=f"(C_regs[1]), "=f"(C_regs[2]), "=f"(C_regs[3])
         : "r"(A_regs[0]), "r"(A_regs[1]), "r"(A_regs[2]), "r"(A_regs[3]),
-          "r"(B_regs[0]), "r"(B_regs[1]), "r"(B_regs[2]), "r"(B_regs[3]),
-          "f"(0.0f), "f"(0.0f), "f"(0.0f), "f"(0.0f),
+          "r"(B_regs[0]), "r"(B_regs[1]),
           "f"(0.0f), "f"(0.0f), "f"(0.0f), "f"(0.0f)
     );
-    
+
     // Store final output (elided)
 }
 ```
@@ -769,23 +668,27 @@ __device__ void fused_attention_tile(
 **What changed:**
 - After the first MMA, results are in `C_regs[]` — plain float variables
 - Softmax operates directly on those registers
-- We pack the softmax results back to fp16 *in registers*
-- Second MMA consumes them immediately — no shared memory round-trip
+- Results get packed back to fp16 in registers (with warp shuffles to rearrange the layout between MMA output and input formats)
+- Second MMA consumes them — no shared memory round-trip
 
-**The performance difference**: In attention kernels, this pattern can save 100+ cycles per tile by eliminating shared memory traffic. FlashAttention and similar kernels rely on this — they're not using WMMA, they're using PTX `mma` (or CUTLASS's PTX wrappers).
+In attention kernels, this pattern can save 100+ cycles per tile by eliminating shared memory traffic. FlashAttention and similar kernels rely on this — they use PTX `mma` (or CUTLASS's PTX wrappers), not WMMA.
 
 **The instruction breakdown**: `mma.sync.aligned.m16n8k16.row.col.f32.f16.f16.f32`
-- `mma.sync` — Warp-synchronous matrix multiply-accumulate
-- `.aligned` — Inputs are properly aligned (required)
-- `.m16n8k16` — Tile shape: M=16 rows, N=8 cols output, K=16 inner dimension
+- `mma.sync` — warp-synchronous matrix multiply-accumulate
+- `.aligned` — inputs are properly aligned (required)
+- `.m16n8k16` — tile shape: 16 rows × 8 cols output, K=16 reduction dimension
 - `.row.col` — A is row-major, B is column-major
-- `.f32.f16.f16.f32` — Accumulate in FP32, inputs are FP16
+- `.f32.f16.f16.f32` — accumulate in fp32, inputs are fp16
 
-Each thread in the warp holds a *piece* of the tile. The 32 threads collectively own the full 16×8 output. PTX tells you exactly which registers map to which elements — WMMA hides this behind "fragments."
+Each thread in the warp holds a piece of the 16×8 output tile. PTX documents exactly which registers map to which matrix elements — WMMA's `fragment.x[]` gives you the values but not the positions.
 
-**One more thing: Hopper's wgmma**
+There's also a practical reason beyond layout knowledge: **WMMA doesn't expose all tile shapes**. The `m16n8k16` shape used above is PTX-only. WMMA only offers `m16n16k16`, `m32n8k16`, and `m8n32k16` for fp16. The smaller PTX tiles give you finer control over register pressure and pipeline scheduling.
 
-On H100, NVIDIA introduced `wgmma` — warp-group MMA operating on 128 threads with massive tiles (64×256×16). There's no WMMA API for this yet. PTX is the *only* way to access it:
+<img src="/images/ptx/thread_mapping.svg" alt="Thread-to-element mapping: WMMA unknown vs PTX documented" style="width:100%;max-width:780px;margin:1.5em auto;display:block;">
+
+**Hopper's wgmma**
+
+On H100, NVIDIA introduced `wgmma` — warp-group MMA operating on 128 threads with tiles up to 64×256×16. There's no WMMA API for this. PTX is the only way to access it:
 
 ```cuda
 asm volatile(
@@ -798,23 +701,35 @@ asm volatile(
 
 If you're building inference engines targeting H100, you'll be writing PTX.
 
-### Example 6: Forcing Register Allocation
+### How big is the gap?
 
-Sometimes you know exactly how many registers a hot loop needs, and you want to prevent spills:
+We benchmarked the WMMA shared-memory path against PTX register-only softmax on an RTX 4090, sweeping tile counts from 1K to 512K with varying warps per block. The PTX path is **2.5–3.7x faster** consistently — and the gap widens as the GPU saturates:
+
+<img src="/images/ptx/mma_scaling.svg" alt="MMA latency: WMMA vs PTX across tile counts" style="width:100%;max-width:700px;margin:1.5em auto;display:block;">
+
+The throughput picture makes it even clearer — PTX sustains over 2 billion attention tiles/sec while WMMA plateaus under 800M:
+
+<img src="/images/ptx/mma_throughput.svg" alt="Attention throughput: WMMA vs PTX" style="width:100%;max-width:700px;margin:1.5em auto;display:block;">
+
+When multiple warps share a block, the WMMA version competes for shared memory bandwidth. The PTX version works entirely in registers — no contention:
+
+<img src="/images/ptx/mma_contention.svg" alt="Shared memory contention across warps" style="width:100%;max-width:500px;margin:1.5em auto;display:block;">
+
+### Forcing Register Allocation
+
+Sometimes you know exactly how many registers a hot loop needs and want to prevent spills:
 
 ```cuda
 __global__ __launch_bounds__(256, 4)  // 256 threads, aim for 4 blocks/SM
 void register_controlled_kernel(float *data) {
-    // Force specific register usage with PTX
     float a, b, c, d;
     asm volatile(
         "{\n"
-        "  .reg .f32 r0, r1, r2, r3;\n"  // Explicitly named registers
+        "  .reg .f32 r0, r1, r2, r3;\n"
         "  ld.global.f32 r0, [%4];\n"
         "  ld.global.f32 r1, [%4+4];\n"
         "  ld.global.f32 r2, [%4+8];\n"
         "  ld.global.f32 r3, [%4+12];\n"
-        "  // ... compute ...\n"
         "  mul.f32 r0, r0, r1;\n"
         "  fma.rn.f32 r0, r2, r3, r0;\n"
         "  mov.f32 %0, r0;\n"
@@ -832,15 +747,54 @@ The scoped block `{ }` with explicit `.reg` declarations tells `ptxas` exactly w
 
 ---
 
-### When NOT to Use PTX
+## When NOT to Use PTX
 
-PTX is a sharp tool. Don't reach for it when:
-
-- **The compiler does fine** — Check `nvcc -ptx` output first. Often it's already optimal.
+- **The compiler does fine** — check `nvcc -ptx` output first. Often it's already optimal.
 - **Readability matters more** — PTX is hard to maintain. Future-you will curse present-you.
-- **Portability matters** — Some PTX features are architecture-specific. Your sm_80 code might not run on sm_90.
-- **You're guessing** — Profile first. PTX micro-optimizations rarely beat algorithmic improvements.
+- **Portability matters** — some PTX features are architecture-specific. Your sm_80 code might not run on sm_90.
+- **You're guessing** — profile first. PTX micro-optimizations rarely beat algorithmic improvements.
 
-**Rule of thumb**: Use PTX for the innermost 10% of your kernel that runs 90% of the time, after you've verified the compiler isn't already doing what you need
+Use PTX for the innermost 10% of your kernel that runs 90% of the time, after you've verified the compiler isn't already doing what you need.
 
---- -->
+---
+
+## Further Reading
+
+- [PTX ISA Reference](https://docs.nvidia.com/cuda/parallel-thread-execution/) — The definitive 400+ page spec
+- [CUDA Binary Utilities](https://docs.nvidia.com/cuda/cuda-binary-utilities/) — `cuobjdump`, `nvdisasm` for inspecting binaries
+- [Inline PTX Assembly in CUDA](https://docs.nvidia.com/cuda/inline-ptx-assembly/)
+
+---
+
+## Benchmarks
+
+All benchmarks run on an RTX 4090 (sm_89, CUDA 12.0). Not every PTX optimization yields a dramatic speedup — the 4090's massive L2 cache and memory bandwidth already hide a lot of latency. The wins are specific: tensor core control is where PTX earns its keep.
+
+<img src="/images/ptx/benchmark_overview.svg" alt="PTX benchmark overview: speedup across all techniques" style="width:100%;max-width:700px;margin:1.5em auto;display:block;">
+
+| Technique | Baseline | PTX | Speedup |
+|-----------|----------|-----|---------|
+| Software Pipelining (cp.async) | 0.437 ms | 0.422 ms | 1.03x |
+| Cache Hints (ld.cs / st.wt) | 13.9 ms | 14.0 ms | ~1.0x |
+| Warp Reduction (shfl) | 1.790 ms | 1.786 ms | ~1.0x |
+| **MMA Attention** | **0.328 ms** | **0.120 ms** | **2.7x** |
+
+The pipelining and cache results are honest: on a GPU this powerful, the compiler and hardware already do a good job. The shuffle reduction confirms the blog's point — the compiler generates near-identical SASS, so PTX shfl is about guaranteed instruction ordering, not raw speed.
+
+The MMA result is the real story. Eliminating the shared memory round-trip for row-wise softmax is a **2.7x** win that scales consistently across workload sizes. This is why FlashAttention and CUTLASS use PTX.
+
+*Benchmark code: [github.com/dhmnr/ptx-bench](https://github.com/dhmnr/ptx-bench)*
+
+---
+
+## Conclusion
+
+We covered PTX from scratch: what instructions look like, how memory and registers work, how to write and run a kernel. Then we looked at where it actually matters — async copies for software pipelining, cache control, warp shuffles, and direct Tensor Core access via `mma` with a documented thread-to-element mapping that WMMA doesn't provide.
+
+The MMA example is where this gets real. WMMA's `fragment.x[]` gives you element access, but without knowing which row each element belongs to, row-wise operations like softmax require a shared memory round-trip. PTX's `mma` documents the exact layout, keeping everything in registers. That's a 2.7x gap on real hardware — and it's the reason production attention kernels use PTX, not WMMA.
+
+In Part 2, we'll go deeper: multi-stage pipelining with more than two buffers, TMA on Hopper, and building a complete attention tile from scratch in PTX.
+
+---
+
+*Questions? Found an error? Let me know in the comments.*

@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 400" font-family="JetBrains Mono,Consolas,monospace">
+<rect width="700" height="400" fill="#0f1117" rx="8"/>
+<text x="350" y="32" text-anchor="middle" fill="#c9cdd6" font-size="15" font-weight="bold">Speedup over CUDA Baseline (RTX 4090)</text>
+<line x1="60" y1="250.0" x2="670" y2="250.0" stroke="#2a2d3a" stroke-dasharray="4,4"/>
+<text x="52" y="254.0" text-anchor="end" fill="#8b90a0" font-size="10">1x</text>
+<line x1="60" y1="185.0" x2="670" y2="185.0" stroke="#2a2d3a" stroke-dasharray="4,4"/>
+<text x="52" y="189.0" text-anchor="end" fill="#8b90a0" font-size="10">2x</text>
+<line x1="60" y1="120.0" x2="670" y2="120.0" stroke="#2a2d3a" stroke-dasharray="4,4"/>
+<text x="52" y="124.0" text-anchor="end" fill="#8b90a0" font-size="10">3x</text>
+<line x1="60" y1="55.0" x2="670" y2="55.0" stroke="#2a2d3a" stroke-dasharray="4,4"/>
+<text x="52" y="59.0" text-anchor="end" fill="#8b90a0" font-size="10">4x</text>
+<line x1="60" y1="250.0" x2="670" y2="250.0" stroke="#8b90a0" stroke-width="1" stroke-dasharray="2,3"/>
+<text x="675" y="254.0" fill="#8b90a0" font-size="9">baseline</text>
+<rect x="101.9375" y="247.68957345971563" width="68.625" height="67.31042654028437" fill="#4477AA" rx="3" opacity="0.5"/>
+<text x="136.25" y="237.68957345971563" text-anchor="middle" fill="#4477AA" font-size="14" font-weight="bold">1.0x</text>
+<text x="136.25" y="335" text-anchor="middle" fill="#8b90a0" font-size="11">Software</text>
+<text x="136.25" y="349" text-anchor="middle" fill="#8b90a0" font-size="11">Pipelining</text>
+<rect x="254.4375" y="250.32518582046885" width="68.625" height="64.67481417953115" fill="#4477AA" rx="3" opacity="0.5"/>
+<text x="288.75" y="240.32518582046885" text-anchor="middle" fill="#4477AA" font-size="14" font-weight="bold">1.0x</text>
+<text x="288.75" y="335" text-anchor="middle" fill="#8b90a0" font-size="11">Cache</text>
+<text x="288.75" y="349" text-anchor="middle" fill="#8b90a0" font-size="11">Hints</text>
+<rect x="406.9375" y="249.85442329227322" width="68.625" height="65.14557670772678" fill="#4477AA" rx="3" opacity="0.5"/>
+<text x="441.25" y="239.85442329227322" text-anchor="middle" fill="#4477AA" font-size="14" font-weight="bold">1.0x</text>
+<text x="441.25" y="335" text-anchor="middle" fill="#8b90a0" font-size="11">Warp</text>
+<text x="441.25" y="349" text-anchor="middle" fill="#8b90a0" font-size="11">Reduction</text>
+<rect x="559.4375" y="137.33333333333334" width="68.625" height="177.66666666666666" fill="#EE7733" rx="3" opacity="0.9"/>
+<text x="593.75" y="127.33333333333334" text-anchor="middle" fill="#EE7733" font-size="14" font-weight="bold">2.7x</text>
+<text x="593.75" y="109.33333333333334" text-anchor="middle" fill="#FFAA66" font-size="9" opacity="0.7">register softmax</text>
+<text x="593.75" y="335" text-anchor="middle" fill="#8b90a0" font-size="11">MMA</text>
+<text x="593.75" y="349" text-anchor="middle" fill="#8b90a0" font-size="11">Attention</text>
+<rect x="75" y="65" width="14" height="14" fill="#4477AA" rx="2" opacity="0.5"/>
+<text x="95" y="76" fill="#8b90a0" font-size="10">~Same as compiler</text>
+<rect x="75" y="87" width="14" height="14" fill="#EE7733" rx="2" opacity="0.9"/>
+<text x="95" y="98" fill="#8b90a0" font-size="10">PTX wins</text>
+</svg>
