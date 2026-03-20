@@ -797,4 +797,4 @@ In Part 2, we'll go deeper: multi-stage pipelining with more than two buffers, T
 
 ---
 
-*Questions? Found an error? Let me know in the comments.*
+*Questions? Found an error? Reach out to me on [X](https://x.com/dhmnrx).*
